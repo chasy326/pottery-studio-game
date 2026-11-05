@@ -759,26 +759,14 @@ function updateCraftMeter() {
 function angle(a) {
   craftState3.view=(a==='위쪽'||a==='top')?'top':(a==='옆면'||a==='side')?'side':'front';
   if (dragging) onPotUp();
-  if (!camera3 || !potGroup3) return;
-  potGroup3.updateWorldMatrix(true,false);
-  var mid=potGroup3.localToWorld(new THREE.Vector3(0,heightScale*.5,0));
-  var base=potGroup3.localToWorld(new THREE.Vector3(0,0,0));
-  var maxR=Math.max(1.12,Math.max.apply(null,radiusProfile)*Math.max(.05,widthScale||1));
-  var halfFov=(camera3.fov||36)*Math.PI/360;
-  var aspect=Math.max(.3,camera3.aspect||1);
-  var dist=Math.max(3.4,maxR/Math.tan(halfFov)/Math.min(1,aspect)*1.25);
+  if (!camera3) return;
+  // The painted workshop background is aligned to these original camera positions.
+  // Moving the camera away shrinks the 3D wheel and exposes the painted wheel and hands.
+  if (craftState3.view==='side') camera3.position.set(4,.15,4);
+  else if (craftState3.view==='top') camera3.position.set(0,5,.1);
+  else camera3.position.set(0,.18,6);
   camera3.up.set(0,1,0);
-  if (craftState3.view==='top') {
-    // Look down from above the actual rim, not through a plate/slab.
-    camera3.position.set(base.x,base.y+heightScale+dist,base.z+.001);
-    camera3.lookAt(mid);
-  } else {
-    dist=Math.max(dist,heightScale*.75/Math.tan(halfFov)*1.2);
-    var lift=Math.max(.65,heightScale*.48);
-    if(craftState3.view==='side') camera3.position.set(mid.x+dist,mid.y+lift,mid.z+.25);
-    else camera3.position.set(mid.x,mid.y+lift,mid.z+dist);
-    camera3.lookAt(mid);
-  }
+  camera3.lookAt(0,-.02,0);
   camera3.updateProjectionMatrix(); camera3.updateMatrixWorld(true);
   if(typeof updateCraftToolUI3==='function') updateCraftToolUI3();
   updateCraftMeter();
