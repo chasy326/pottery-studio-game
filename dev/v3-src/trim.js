@@ -3,9 +3,9 @@
 /* ===== 소소도예 굽 깎기 (trimming) ===== */
 var ICONS=__ICONS__;
 var TOOLS={
-  gupkal:{name:'굽칼',w:.05,rate:.0019,shape:'flat',ico:ICONS.gupkal},
-  loop:{name:'고리칼',w:.045,rate:.0025,shape:'round',ico:ICONS.loop},
-  tri:{name:'삼각칼',w:.016,rate:.0032,shape:'v',ico:ICONS.tri}
+  gupkal:{name:'굽칼',w:.05,rate:.0036,shape:'flat',ico:ICONS.gupkal},
+  loop:{name:'고리칼',w:.045,rate:.0047,shape:'round',ico:ICONS.loop},
+  tri:{name:'삼각칼',w:.016,rate:.006,shape:'v',ico:ICONS.tri}
 };
 var FOOTS={
   flat:{name:'평굽',desc:'바닥은 평평하게, 모서리만 둥글게 다듬어요'},
@@ -53,7 +53,7 @@ function buildModel(){
   for(j=0;j<pts.length;j++){var a=pts[Math.max(0,j-2)],b=pts[Math.min(pts.length-1,j+2)],tx=b.r-a.r,ty=b.y-a.y,l=Math.hypot(tx,ty)||1;pts[j].nx=-ty/l;pts[j].ny=tx/l;}
   pts[0].nx=0;pts[0].ny=1;
   var inner=[];
-  var isH=hollow(H,f);if(isH){var FT=clamp(H*.22,.05,.1);f=Math.max(f,Math.min(FT,H-.06));}
+  var isH=hollow(H,f);if(isH){var FT=clamp(H*.3,.08,.15);f=Math.max(f,Math.min(FT,H-.06));}
   if(isH){inner.push([Math.max(.02,r[CNn]-w),H]);for(i=1;i<=36;i++){var y=H-(H-f)*i/36;inner.push([Math.max(.02,interpR(r,y/H)-w),y]);}inner.push([0,f]);}
   function segDist(px,py,ax,ay,bx,by){var dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1e-9,t=clamp(((px-ax)*dx+(py-ay)*dy)/L2,0,1);return Math.hypot(px-ax-dx*t,py-ay-dy*t);}
   pts.forEach(function(p){var m=1e9;if(isH){for(var q=1;q<inner.length;q++)m=Math.min(m,segDist(p.r,p.y,inner[q-1][0],inner[q-1][1],inner[q][0],inner[q][1]));}else m=Math.min(H,p.r+.2)*.5+TMIN;
@@ -75,8 +75,8 @@ var clayMat=null,origMat=null,lastBuild=0,dirty=false;
 function clayBase(){var h;try{h=clay==='흑토'?0x51483f:clay==='분청토'?0xb9a587:0xc6a07b;}catch(e){h=0xc6a07b;}var c=new THREE.Color(h),l=c.clone().convertSRGBToLinear();return c.lerp(l,1).getHex();}
 function rebuild(force){if(!M||!potMesh3)return;var t=now();if(!force&&t-lastBuild<45){dirty=true;return;}lastBuild=t;dirty=false;
   var g=new THREE.LatheGeometry(profilePoints(),96),np=M.pts.length+M.inner.length+(M.hollow?0:1),cnt=g.attributes.position.count,col=new Float32Array(cnt*3);
-  var base=new THREE.Color(TR.dryColor||clayBase()),fresh=base.clone().multiplyScalar(.78).lerp(new THREE.Color(0x8a5a36),.12),c=new THREE.Color();
-  for(var v=0;v<cnt;v++){var j=v%np,d=j<M.pts.length?M.pts[j].d:0,k=clamp(d/.006,0,1),stripe=j<M.pts.length?(Math.sin(j*1.7)*.5+.5)*.06*k:0;c.copy(base).lerp(fresh,k*.85);c.multiplyScalar(1-stripe);col[v*3]=c.r;col[v*3+1]=c.g;col[v*3+2]=c.b;}
+  var base=new THREE.Color(TR.dryColor||clayBase()),fresh=base.clone().lerp(new THREE.Color(0xf6e2c6),.38),edge=base.clone().multiplyScalar(.55).lerp(new THREE.Color(0x5a3418),.25),c=new THREE.Color(),NP=M.pts.length,slope=new Float32Array(NP);for(var q=1;q<NP-1;q++)slope[q]=Math.abs(M.pts[q+1].d-M.pts[q-1].d)/(2*M.ds);
+  for(var v=0;v<cnt;v++){var j=v%np,d=j<M.pts.length?M.pts[j].d:0,k=clamp(d/.004,0,1),stripe=j<NP?(Math.sin(j*1.9)*.5+.5)*.13*k:0,eg=j<NP?clamp(slope[j]*1.4,0,.75):0;c.copy(base).lerp(fresh,k*.9);c.multiplyScalar(1-stripe);c.lerp(edge,eg);col[v*3]=c.r;col[v*3+1]=c.g;col[v*3+2]=c.b;}
   g.setAttribute('color',new THREE.BufferAttribute(col,3));
   var old=potMesh3.geometry;potMesh3.geometry=g;if(old)old.dispose();}
 
@@ -122,10 +122,10 @@ function updateRibbons(dt){var top=WHEEL_TOP+.006;for(var i=pieces.length-1;i>=0
 function clearPile(){pile.forEach(function(p){wheelGroup3.remove(p);});pile=[];pieces.forEach(function(p){if(p.parent)p.parent.remove(p);});pieces=[];}
 
 /* foot guides (transparent white lines) */
-function footProfile(kind){var r0=M.r0,H=M.H,dep=Math.min(.03,(M.f-TMIN)*.8),wallAt=function(y){return interpR(M.r,y/H);},out=[];
+function footProfile(kind){var r0=M.r0,H=M.H,dep=Math.min(.07,(M.f-TMIN)*.8),wallAt=function(y){return interpR(M.r,y/H);},out=[];
   if(kind==='flat'){out=[[0,.004],[r0-.04,.004],[r0-.012,.012],[wallAt(.05)-.014,.05],[wallAt(.11)-.004,.11]];}
-  else if(kind==='inner'){var Ro=r0*.84,Ri=Ro-Math.min(.075,r0*.25);out=[[0,dep],[Ri-.012,dep],[Ri,.004],[Ro,.004],[Ro+.012,.04],[wallAt(.05)-.03,.05],[wallAt(.12)-.006,.12]];}
-  else{var Ro2=r0*.97,Ri2=Ro2-Math.min(.06,r0*.2);out=[[0,dep],[Ri2-.012,dep],[Ri2,.004],[Ro2,.004],[Ro2+.004,.055],[wallAt(.075)-.035,.075],[wallAt(.15)-.006,.15]];}
+  else if(kind==='inner'){var Ro=r0*.84,Ri=Ro-Math.min(.075,r0*.25);out=[[0,dep],[Ri-.012,dep],[Ri,.004],[Ro,.004],[Ro+.014,.07],[wallAt(.08)-.035,.08],[wallAt(.16)-.006,.16]];}
+  else{var Ro2=r0*.97,Ri2=Ro2-Math.min(.06,r0*.2);out=[[0,dep],[Ri2-.012,dep],[Ri2,.004],[Ro2,.004],[Ro2+.004,.085],[wallAt(.11)-.04,.11],[wallAt(.2)-.006,.2]];}
   return out;}
 function tubeAlong(points,rad){var path=new THREE.CurvePath();for(var i=1;i<points.length;i++)path.add(new THREE.LineCurve3(points[i-1],points[i]));return new THREE.TubeGeometry(path,points.length*6,rad,5,false);}
 function buildGuide(){if(guideGrp){scene3.remove(guideGrp);guideGrp=null;}guideGrp=new THREE.Group();var prof=footProfile(TR.foot),m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.6,depthTest:false});
