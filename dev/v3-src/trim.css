@@ -1,0 +1,63 @@
+#makeMode.soso-trim{background:radial-gradient(120% 70% at 50% 38%,#fbf1de 0%,#efdcbc 55%,#d3ad7f 100%)!important}
+#makeMode.soso-trim .focus-stage,#makeMode.soso-trim .tooltray,#makeMode.soso-trim .finish-actions,#makeMode.soso-trim #finishBanner,#makeMode.soso-trim #trimHeader{display:none!important}
+#sosoTrimPanel{position:absolute;z-index:46;left:0;right:0;bottom:0;display:none;flex-direction:column;gap:7px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:#fff8e8f4;border-top:1px solid #d6c09c;box-shadow:0 -4px 12px #4b34201c;font-family:inherit}
+#sosoTrimPanel.show{display:flex}
+#sosoTrimPanel .tp-hint{font-size:16px;color:#6b4a2c;text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sosoTrimPanel .tp-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#sosoTrimPanel .tp-tool{position:relative;height:74px;border-radius:18px;border:2px solid #e2cda8;background:linear-gradient(180deg,#fffdf6,#f6ead2);box-shadow:0 3px 0 #c9ab7f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:2px 4px 4px;color:#5b3a1f;font:inherit;font-size:18px;line-height:1;cursor:pointer;transition:transform .12s,box-shadow .12s,opacity .2s}
+#sosoTrimPanel .tp-tool img{width:50px;height:50px;object-fit:contain;filter:drop-shadow(0 2px 1px rgba(80,50,25,.25));transform:rotate(-8deg)}
+#sosoTrimPanel .tp-tool span{margin-top:-2px}
+#sosoTrimPanel .tp-tool.on{border-color:#e97c31;background:linear-gradient(180deg,#fff3e2,#ffdcb6);box-shadow:0 3px 0 #b8581c,0 0 0 3px #ffd7a8 inset;transform:translateY(-2px)}
+#sosoTrimPanel .tp-row{display:flex;align-items:center;gap:8px}
+#sosoTrimPanel .tp-speed{flex:1;display:flex;align-items:center;gap:6px;font-size:16px;color:#6b4a2c;background:#fffdf6;border:1px solid #e2cda8;border-radius:14px;padding:6px 10px;min-width:0}
+#sosoTrimPanel .tp-speed span{white-space:nowrap}
+#sosoTrimPanel .tp-speed input{flex:1;min-width:60px;accent-color:#e97c31}
+#sosoTrimPanel .tp-speed b{font-weight:400;white-space:nowrap;min-width:3.6em;text-align:right}
+#sosoTrimPanel .tp-done{flex:0 0 108px;height:50px;border-radius:18px;border:2px solid #8a4416;background:linear-gradient(180deg,#f29a4a,#c9661f);color:#fff;font:inherit;font-size:21px;text-shadow:-1.5px 0 #6b3510,1.5px 0 #6b3510,0 -1.5px #6b3510,0 1.5px #6b3510;box-shadow:0 4px 0 #8a4416;cursor:pointer}
+#sosoTrimPanel .tp-done.pulse{animation:soso-trim-pulse 1.1s ease-in-out infinite}
+#sosoTrimPanel.locked .tp-tool{opacity:.45;filter:grayscale(.6)}
+#sosoTrimPanel.locked .tp-speed{opacity:.6}
+@keyframes soso-trim-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+#sosoTrimGuideBtn{flex:0 0 auto;height:40px;padding:0 12px;border-radius:14px;border:2px solid #9fd4a9;background:#effaf0;color:#2f7a3e;font:inherit;font-size:16px;white-space:nowrap;cursor:pointer}
+#sosoTrimGuideBtn.off{border-color:#d9c7a6;background:#fbf4e6;color:#8a7458}
+#sosoTrimGuideBtn[hidden]{display:none!important}
+#sosoTrimCaption{position:absolute;z-index:47;left:50%;top:84px;transform:translate(-50%,-6px);max-width:86%;padding:8px 16px;border-radius:16px;background:#fffaf0f2;border:2px solid #e2c99a;color:#5b3a1f;font-size:19px;text-align:center;box-shadow:0 3px 0 rgba(91,58,31,.18);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap}
+#sosoTrimCaption.show{opacity:1;transform:translate(-50%,0)}
+#sosoTrimBubble{position:absolute;z-index:48;left:50%;top:38%;transform:translate(-50%,0);padding:12px 22px;border-radius:22px;background:#fff;border:3px solid #e97c31;color:#5b3a1f;font-size:22px;white-space:nowrap;box-shadow:0 5px 0 rgba(120,60,20,.25);opacity:0;pointer-events:none}
+#sosoTrimBubble::after{content:'';position:absolute;left:50%;bottom:-14px;margin-left:-10px;border:10px solid transparent;border-top-color:#e97c31;border-bottom:0}
+#sosoTrimBubble.show{animation:soso-trim-bubble 3s ease forwards}
+@keyframes soso-trim-bubble{0%{opacity:0;transform:translate(-50%,10px) scale(.92)}14%{opacity:1;transform:translate(-50%,0) scale(1)}78%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-10px)}}
+#sosoFootPick,#sosoTrimResult{position:absolute;z-index:60;inset:0;display:none;align-items:center;justify-content:center;background:rgba(60,40,20,.28);padding:16px}
+#sosoFootPick.show,#sosoTrimResult.show{display:flex}
+#sosoFootPick .fp-card,#sosoTrimResult .tr-card{width:100%;max-width:360px;background:#fffaf0;border:2px solid #e2c99a;border-radius:24px;padding:18px 16px 16px;box-shadow:0 6px 0 rgba(91,58,31,.25);color:#5b3a1f;text-align:center;animation:soso-trim-pop .28s ease}
+@keyframes soso-trim-pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+#sosoFootPick h3,#sosoTrimResult h3{margin:0 0 4px;font-size:25px;font-weight:400}
+#sosoFootPick .fp-sub,#sosoTrimResult .tr-sub{margin:0 0 12px;font-size:16px;color:#8a6a48;line-height:1.35}
+#sosoFootPick .fp-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+#sosoFootPick .fp-opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:18px;border:2px solid #e8d6b4;background:#fff;text-align:left;font:inherit;color:#5b3a1f;cursor:pointer}
+#sosoFootPick .fp-opt.on{border-color:#e97c31;background:#fff2e2;box-shadow:0 0 0 3px #ffd7a8}
+#sosoFootPick .fp-ico{flex:0 0 74px;height:46px}
+#sosoFootPick .fp-txt b{display:block;font-size:21px;font-weight:400}
+#sosoFootPick .fp-txt b em{font-style:normal;font-size:14px;color:#fff;background:#e97c31;border-radius:8px;padding:1px 7px;margin-left:4px;vertical-align:2px}
+#sosoFootPick .fp-txt small{display:block;font-size:15px;color:#8a6a48;line-height:1.3;word-break:keep-all}
+#sosoFootPick .fp-go,#sosoTrimResult .tr-save{width:100%;height:54px;border-radius:20px;border:2px solid #8a4416;background:linear-gradient(180deg,#f29a4a,#c9661f);color:#fff;font:inherit;font-size:22px;text-shadow:-1.5px 0 #6b3510,1.5px 0 #6b3510,0 -1.5px #6b3510,0 1.5px #6b3510;box-shadow:0 4px 0 #8a4416;cursor:pointer}
+#sosoTrimResult .tr-label{display:inline-block;font-size:15px;color:#fff;background:#b98a52;border-radius:10px;padding:2px 10px;margin-bottom:4px}
+#sosoTrimResult .tr-sec{display:block;width:100%;height:auto;margin:0 0 12px}
+#sosoTrimDragHint{position:absolute;z-index:45;width:0;height:0;pointer-events:none;display:none}
+#sosoTrimDragHint.show{display:block}
+#sosoTrimDragHint .fg{position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);border:3px solid #3fbf5f;box-shadow:0 3px 8px rgba(40,80,40,.35);animation:soso-trim-drag 1.8s ease-in-out infinite}
+#sosoTrimDragHint .fg::after{content:'';position:absolute;inset:11px;border-radius:50%;background:#3fbf5f;opacity:.85}
+#sosoTrimDragHint .ar{position:absolute;left:calc(var(--dx) / 2 - 18px);top:-62px;font-size:34px;color:#2f9a4c;font-weight:400;text-shadow:0 2px 0 #fff}
+@keyframes soso-trim-drag{0%{transform:translate(0,0) scale(1);opacity:0}12%{opacity:1;transform:translate(0,0) scale(.85)}75%{transform:translate(var(--dx),0) scale(.85);opacity:1}100%{transform:translate(var(--dx),0) scale(1);opacity:0}}
+#sosoGallery{position:fixed;z-index:200;inset:0;display:none;align-items:center;justify-content:center;background:rgba(60,40,20,.35);padding:16px}
+#sosoGallery.show{display:flex}
+#sosoGallery .gl-card{width:100%;max-width:380px;max-height:80vh;overflow:auto;background:#fffaf0;border:2px solid #e2c99a;border-radius:24px;padding:14px 14px 16px;box-shadow:0 6px 0 rgba(91,58,31,.25);color:#5b3a1f}
+#sosoGallery .gl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+#sosoGallery h3{margin:0!important;font-size:25px!important;font-weight:400!important}
+#sosoGallery [data-close]{width:40px;height:40px;border-radius:50%;border:2px solid #e2c99a;background:#fff;color:#8a6a48;font-size:18px}
+#sosoGallery .gl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+#sosoGallery .gl-item{background:linear-gradient(180deg,#fff,#f6ead2);border:2px solid #ecdcbc;border-radius:18px;padding:8px 6px;text-align:center}
+#sosoGallery .gl-item svg{width:100%;height:auto;display:block}
+#sosoGallery .gl-item b{display:block;font-size:19px;font-weight:400}
+#sosoGallery .gl-item small{display:block;font-size:14px;color:#8a6a48}
+#sosoGallery .gl-empty{text-align:center;font-size:18px;color:#8a6a48;line-height:1.5;margin:24px 0}
