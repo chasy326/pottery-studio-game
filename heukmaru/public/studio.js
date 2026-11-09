@@ -573,7 +573,7 @@ function renderMyPieces() {
     for (let k = 0; k < n; k++) pts.push(new THREE.Vector2(pc.r[k], H * k / (n - 1)));
     for (let k = n - 1; k >= 0; k--) { const y = H * k / (n - 1); if (y < pc.floorT) break; pts.push(new THREE.Vector2(Math.max(0.02, pc.r[k] - pc.t[k]), y)); }
     pts.push(new THREE.Vector2(0.001, pc.floorT));
-    const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 32), M('#cfa47c', 0.85)); m.material.side = THREE.DoubleSide;
+    const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 32), M(pc.color || '#cfa47c', 0.85)); m.material.side = THREE.DoubleSide;
     m.castShadow = true; m.scale.setScalar(0.2); m.position.set(-1.35 + i * 0.55, 0.745, -1.38); myPieces.add(m);
   });
 }

@@ -8,6 +8,13 @@ const THREE = window.THREE, V = (x, y, z) => new THREE.Vector3(x, y, z);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), lerp = (a, b, t) => a + (b - a) * t;
 
 /* ---------- 기물 목표 형태 (높이 0~1에 대한 바깥 반지름) ---------- */
+/* ---------- 흙 4종 (색 · 다루는 느낌) ---------- */
+const CLAYS = {
+  white: { name: '백자토', level: '어려움', desc: '하얗고 매끈해요. 얇게 빚을 수 있지만 중심 잡기가 어렵고 물에 약해요', wet: '#cfc8bd', dry: '#ebe6dd', fired: '#f4f1ea', center: 0.62, soak: 0.42, thin: 0.036, dry_rate: 1.25 },
+  buff:  { name: '분청토', level: '보통', desc: '연한 회갈색의 무난한 흙이에요. 처음이라면 이걸로!', wet: '#a99a86', dry: '#cbbfae', fired: '#d9cfc0', center: 0.5, soak: 0.55, thin: 0.042, dry_rate: 1.0 },
+  red:   { name: '적토', level: '쉬움', desc: '붉고 거칠어요. 중심이 잘 잡히고 튼튼하지만 얇게 빚긴 어려워요', wet: '#9a5a3d', dry: '#c08060', fired: '#b5654a', center: 0.38, soak: 0.72, thin: 0.052, dry_rate: 0.8 },
+  black: { name: '흑토', level: '보통', desc: '짙은 회흑색이에요. 구우면 깊은 검은빛이 나요', wet: '#4a4440', dry: '#6e6761', fired: '#3a3532', center: 0.48, soak: 0.55, thin: 0.044, dry_rate: 1.05 }
+};
 const VESSELS = {
   cup:    { name: '컵', H: 1.0, floorR: 0.3, pulls: 3, prof: t => 0.42 - 0.03 * t + 0.02 * Math.sin(t * Math.PI) },
   bowl:   { name: '사발', H: 0.62, floorR: 0.34, pulls: 2, prof: t => 0.36 + 0.5 * Math.pow(t, 0.8) },
@@ -58,7 +65,9 @@ const css = document.createElement('style'); css.textContent = `
 .tw-pedal.auto{opacity:.55}
 .tw-dock{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:8px;padding:8px;border-radius:999px;background:#1f1c1acc;border:1px solid #ffffff1c}
 .tw-dock button,.tw-card button{font-family:inherit;font-size:14px;font-weight:700;padding:12px 18px;border-radius:999px;border:1px solid #ffffff38;background:#3a3430;color:#f6efe4;cursor:pointer;white-space:nowrap}
-.tw-dock button.pri,.tw-card button.pri{background:#f3ece2;color:#2f2925;border-color:#f3ece2}
+.tw-dock button.pri{background:#f3ece2;color:#2f2925;border-color:#f3ece2}
+.tw-card button{background:#efe6d8;color:#3a2f27;border-color:#d9cbb6}
+.tw-card button.pri{background:#3a2f27;color:#fff;border-color:#3a2f27}
 .tw-dock button:disabled{opacity:.35;cursor:default}
 .tw-tools{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);display:flex;gap:8px}
 .tw-tools[hidden]{display:none}
@@ -68,16 +77,23 @@ const css = document.createElement('style'); css.textContent = `
 .tw-tools button.need::after{content:"";position:absolute;margin:-6px 0 0 30px;width:8px;height:8px;border-radius:50%;background:#e2683f}
 .tw-veil{position:absolute;inset:0;display:grid;place-items:center;background:#1c1916d9;z-index:5}
 .tw-veil[hidden]{display:none}
-.tw-card{background:#f6f1e8;color:#2f2925;border-radius:24px;padding:22px;max-width:94vw;width:560px;text-align:center;box-shadow:0 20px 60px #0008}
+.tw-card{background:#f6f1e8;color:#2f2925;border-radius:24px;padding:22px;max-width:94vw;width:560px;max-height:94vh;overflow:auto;text-align:center;box-shadow:0 20px 60px #0008}
 .tw-card h2{margin:0 0 4px;font-size:21px}.tw-card p{margin:0 0 14px;font-size:13px;color:#7a6d60}
 .tw-ves{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
 .tw-ves button{background:#fff;border:2px solid #e3d8c8;border-radius:16px;padding:8px 2px 6px;font-size:12px;font-weight:700;color:#3a322b;display:flex;flex-direction:column;align-items:center;gap:4px}
 .tw-ves button.on{border-color:#a8875f;background:#fbf5ea}
 .tw-ves canvas{width:52px;height:62px}
 .tw-mode{display:flex;gap:8px;justify-content:center;margin-bottom:16px}
-.tw-mode button{flex:1;max-width:220px;text-align:left;background:#fff;border:2px solid #e3d8c8;border-radius:14px;padding:10px 12px;color:#3a322b;font-size:13px}
+.tw-mode button{flex:1;max-width:240px;text-align:left;white-space:normal;line-height:1.35;font-weight:500;background:#fff;border:2px solid #e3d8c8;border-radius:14px;padding:10px 12px;color:#3a322b;font-size:13px}
 .tw-mode button b{display:block;font-size:14px;margin-bottom:2px}
 .tw-mode button.on{border-color:#a8875f;background:#fbf5ea}
+.tw-sec{text-align:left;font-size:12px;font-weight:700;color:#8a7a68;margin:2px 0 6px}
+.tw-clays{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.tw-clays button{background:#fff;border:2px solid #e3d8c8;border-radius:14px;padding:8px 4px;font-family:inherit;font-size:13px;font-weight:700;color:#3a322b;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.tw-clays button i{width:34px;height:34px;border-radius:50%;box-shadow:inset 0 -5px 8px #0003, inset 0 3px 5px #fff6}
+.tw-clays button small{font-size:10px;font-weight:600;color:#9a8b7a}
+.tw-clays button.on{border-color:#a8875f;background:#fbf5ea}
+.tw-clay-desc{font-size:12px;color:#6d6052;text-align:left;margin:0 0 12px;min-height:16px}
 .tw-stars{font-size:34px;letter-spacing:4px;color:#d9a441;margin:4px 0 6px}
 .tw-scores{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;text-align:left;font-size:13px;margin:10px 0 14px}
 .tw-scores div{display:flex;justify-content:space-between;border-bottom:1px dashed #d9cdbb;padding-bottom:3px}
@@ -90,7 +106,7 @@ const css = document.createElement('style'); css.textContent = `
  .tw-dock{bottom:14px;flex-wrap:wrap;justify-content:center;border-radius:22px;width:calc(100vw - 20px)}
  .tw-dock button{padding:10px 13px;font-size:13px}
  .tw-tools{bottom:208px}.tw-tools button{width:62px}
- .tw-ves{grid-template-columns:repeat(3,1fr)}
+ .tw-ves{grid-template-columns:repeat(3,1fr)}.tw-clays{grid-template-columns:repeat(2,1fr)}.tw-card{max-height:92vh;overflow:auto}
  .tw-chip{font-size:10px;padding:4px 7px}
 }`;
 document.head.appendChild(css);
@@ -114,8 +130,11 @@ host.innerHTML = `
   <button data-a="leave">일어서기</button>
 </div>
 <div class="tw-veil" data-v="setup"><div class="tw-card">
-  <h2>무엇을 빚을까요?</h2><p>기물과 난이도를 고르면 흙이 물레 위로 올라와요</p>
+  <h2>무엇을 빚을까요?</h2><p>흙 → 기물 → 난이도 순서로 골라요</p>
+  <div class="tw-sec">① 흙</div><div class="tw-clays"></div><div class="tw-clay-desc"></div>
+  <div class="tw-sec">② 기물</div>
   <div class="tw-ves"></div>
+  <div class="tw-sec">③ 난이도</div>
   <div class="tw-mode">
     <button data-m="easy"><b>🌱 쉬움</b>실패 없이 순서만 따라가요. 속도는 자동이에요.</button>
     <button data-m="real" class="on"><b>🔥 실전</b>속도·물·중심이 결과를 좌우해요. 주저앉을 수도 있어요.</button>
@@ -153,7 +172,7 @@ const head = mesh(new THREE.CylinderGeometry(1.05, 1.02, 0.1, 64), M('#5f5e5b', 
 const headMark = mesh(new THREE.BoxGeometry(0.06, 0.012, 0.9), M('#8d8b86', 0.4, 0.5), 0, 0.002, 0.0, head); headMark.position.set(0, 0.051, 0.5);
 // 흙 표면 텍스처 (회전이 보이도록 자국·물레선)
 const clayTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
-  g.fillStyle = '#c8a98a'; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = '#ece6de'; g.fillRect(0, 0, 512, 256);
   for (let y = 0; y < 256; y += 6) { g.fillStyle = `rgba(80,50,30,${0.05 + Math.random() * 0.07})`; g.fillRect(0, y, 512, 2); }
   for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '255,235,210' : '70,40,25'},${Math.random() * 0.18})`; g.beginPath(); g.ellipse(Math.random() * 512, Math.random() * 256, 2 + Math.random() * 10, 1 + Math.random() * 3, 0, 0, 7); g.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; return t; })();
@@ -186,7 +205,7 @@ const tools = (() => {
 
 /* ---------- 상태 ---------- */
 const st = {
-  active: false, mode: 'real', vessel: 'cup', step: 0, speed: 0, rot: 0,
+  active: false, mode: 'real', vessel: 'cup', clay: 'buff', step: 0, speed: 0, rot: 0,
   wet: 0.7, soak: 0, pool: 0, wobble: 0.6, dryHits: 0, speedMiss: 0,
   // 덩어리
   lumpR: 0.72, lumpH: 0.62, vol: 0, cone: 0, coneCycles: 0, coneDir: 0, attachX: 0.32, attachZ: -0.12, attached: false,
@@ -237,7 +256,7 @@ function tAt(y) { const i = clamp(y / st.H * (N - 1), 0, N - 1), a = Math.floor(
 const chips = $('.tw-top');
 function renderChips() {
   chips.innerHTML = STEPS.map((s, i) => `<span class="tw-chip ${i === st.step ? 'on' : i < st.step ? 'done' : ''}">${i < st.step ? '✓ ' : ''}${s.label}${s.key === 'pull' && i === st.step ? ` ${st.pulls}/${VESSELS[st.vessel].pulls}` : ''}</span>`).join('') +
-    `<span class="tw-badge ${st.mode === 'easy' ? 'easy' : ''}">${VESSELS[st.vessel].name} · ${st.mode === 'easy' ? '쉬움' : '실전'}</span>`;
+    `<span class="tw-badge ${st.mode === 'easy' ? 'easy' : ''}">${CLAYS[st.clay].name} ${VESSELS[st.vessel].name} · ${st.mode === 'easy' ? '쉬움' : '실전'}</span>`;
 }
 const tipEl = $('.tw-tip'), warnEl = $('.tw-warn');
 function tip(t) { tipEl.textContent = t; }
@@ -395,7 +414,7 @@ function onDragMove(c, d) {
     const wetOK = frictionCheck(dt, 1);
     if (d.dy > 0) { st.cone = clamp(st.cone + d.dy * 1.6, 0, 1); st.lumpH = clamp(st.lumpH + d.dy * 0.9, 0.5, 1.05); if (st.cone > 0.85 && st.coneDir !== 1) st.coneDir = 1; }
     else if (d.dy < 0) { st.cone = clamp(st.cone + d.dy * 1.6, 0, 1); st.lumpH = clamp(st.lumpH + d.dy * 0.9, 0.5, 1.05);
-      if (st.coneDir === 1 && st.cone < 0.12) { st.coneDir = 0; st.coneCycles++; st.wobble *= wetOK ? (st.mode === 'easy' ? 0.35 : 0.5) : 0.92; warn(`코닝 ${st.coneCycles}번 ✓`, 900); } }
+      if (st.coneDir === 1 && st.cone < 0.12) { st.coneDir = 0; st.coneCycles++; st.wobble *= wetOK ? (st.mode === 'easy' ? 0.35 : CLAYS[st.clay].center) : 0.92; warn(`코닝 ${st.coneCycles}번 ✓`, 900); } }
     const fast = Math.abs(d.dy) / dt;
     if (st.mode === 'real' && fast > 4.5) { st.wobble = Math.min(1, st.wobble + 0.02); if (performance.now() > st.warnUntil) warn('너무 빨리 움직여요. 천천히!'); }
     else if (wetOK) st.wobble = Math.max(0.02, st.wobble - 0.03 * dt);
@@ -459,7 +478,7 @@ function onDragEnd(d) {
     if (st.mode === 'real' && !speedOK()) { warn('속도가 맞지 않아 벽이 잘 안 올라갔어요'); }
     const v = VESSELS[st.vessel];
     if (st.pulls >= v.pulls + 1) { warn('벽은 충분히 올렸어요. 다음 단계로!'); return; }
-    let k2 = 0.76, quality = 1;
+    let k2 = 0.73, quality = 1;
     if (st.mode === 'real') {
       if (dur < 0.5) { quality = 0.5; k2 = 0.88; st.uneven += 0.06; warn('너무 빨리 올렸어요. 벽이 고르지 않아요'); if (st.wobble > 0.18 || st.H > 0.9) return fail('tear'); }
       else if (dur > 4) { quality = 0.8; k2 = 0.82; st.wet = Math.max(0, st.wet - 0.2); warn('너무 오래 걸려 흙이 지쳤어요'); }
@@ -471,14 +490,14 @@ function onDragEnd(d) {
     let maxH = Math.min(v.H * 1.45, 1.75);
     for (let i = 0; i < N; i++) tNew.push(Math.max(0.05, st.t[i] * k2));
     const avgOld = st.t.reduce((a, b) => a + b, 0) / N, avgNew = tNew.reduce((a, b) => a + b, 0) / N;
-    st.H = clamp(Hold * Math.pow(avgOld / avgNew, 0.85) * 0.97, Hold, maxH);
+    st.H = clamp(Hold * (avgOld / avgNew) * 0.96, Hold, maxH);
     // 높이 늘리면서 약간 좁아지는 실제 경향
-    for (let i = 0; i < N; i++) { st.t[i] = tNew[i]; st.r[i] = Math.max(st.floorR + st.t[i] + 0.02, st.r[i] * (st.vessel === 'bowl' ? 1.0 : 0.985)); }
+    for (let i = 0; i < N; i++) { st.t[i] = tNew[i]; const tgt = st.floorR + st.t[i] + 0.05; if (st.vessel !== 'bowl' && st.r[i] > tgt) st.r[i] = lerp(st.r[i], tgt, 0.35); st.r[i] = Math.max(st.floorR + st.t[i] + 0.02, st.r[i]); }
     if (st.vessel === 'bowl') for (let i = 0; i < N; i++) st.r[i] += 0.07 * Math.pow(i / (N - 1), 1.2);
     st.rimRough = clamp(st.rimRough + st.wobble * 0.3 + (quality < 1 ? 0.05 : 0), 0, 0.5);
     st.pulls++; st.wet = Math.max(0, st.wet - 0.22);
     buildClay(); renderChips(); tip(STEP_TIP.pull());
-    if (st.mode === 'real') { if (st.t[Math.floor(N * 0.7)] < 0.06) return fail('thin'); if (st.soak > 0.55 && st.H > 0.85) return fail('soak'); }
+    if (st.mode === 'real') { if (st.t[Math.floor(N * 0.7)] < CLAYS[st.clay].thin + 0.015) return fail('thin'); if (st.soak > CLAYS[st.clay].soak && st.H > 0.85) return fail('soak'); }
     warn(quality === 1 ? `벽 올리기 ${st.pulls}번 ✓` : `벽 올리기 ${st.pulls}번`, 900);
     updateNext();
   }
@@ -487,9 +506,9 @@ function collapseCheck() {
   for (let i = 2; i < N; i++) {
     const dy = st.H / (N - 1), slope = (st.r[i] - st.r[i - 2]) / (2 * dy);
     if (slope > 2.3 && st.t[i] < 0.085) return fail('slump');
-    if (st.t[i] < 0.042) return fail('thin');
+    if (st.t[i] < CLAYS[st.clay].thin) return fail('thin');
   }
-  if (st.soak > 0.6 && st.H > 0.8) fail('soak');
+  if (st.soak > CLAYS[st.clay].soak + 0.05 && st.H > 0.8) fail('soak');
 }
 function computeShapeScore() {
   const v = VESSELS[st.vessel]; let err = 0;
@@ -542,9 +561,9 @@ function finishPiece() {
     물: '물을 너무 적게 혹은 많이 썼어요. 손이 미끄러울 만큼만!'
   };
   const say = stars === 3 ? '와, 이건 그대로 가마에 넣어도 되겠어요!' : COMMENT[worst];
-  const piece = { id: Date.now(), vessel: st.vessel, name: VESSELS[st.vessel].name, mode: st.mode, stars, score: Math.round(total * 100), H: +st.H.toFixed(3), r: Array.from(st.r, v => +v.toFixed(3)), t: Array.from(st.t, v => +v.toFixed(3)), floorT: +st.floorT.toFixed(3), at: new Date().toISOString() };
+  const piece = { id: Date.now(), vessel: st.vessel, clay: st.clay, clayName: CLAYS[st.clay].name, color: CLAYS[st.clay].dry, name: VESSELS[st.vessel].name, mode: st.mode, stars, score: Math.round(total * 100), H: +st.H.toFixed(3), r: Array.from(st.r, v => +v.toFixed(3)), t: Array.from(st.t, v => +v.toFixed(3)), floorT: +st.floorT.toFixed(3), at: new Date().toISOString() };
   st.lastPiece = piece;
-  showResult(`<h2>${VESSELS[st.vessel].name} 완성!</h2><div class="tw-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div><p>${st.mode === 'easy' ? '쉬움' : '실전'} 모드 · ${Math.round(total * 100)}점</p>
+  showResult(`<h2>${VESSELS[st.vessel].name} 완성!</h2><div class="tw-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div><p>${CLAYS[st.clay].name} · ${st.mode === 'easy' ? '쉬움' : '실전'} 모드 · ${Math.round(total * 100)}점</p>
     <div class="tw-scores">${Object.keys(sc).map(k => `<div><span>${k}</span><b>${Math.round(sc[k] * 100)}</b></div>`).join('')}</div>
     <div class="tw-say">🧑‍🏫 선생님: ${say}</div>
     <button class="pri" data-a="save">작업대에 올려두기</button> <button data-a="redo">하나 더 빚기</button>`);
@@ -555,7 +574,7 @@ function showResult(html) { const v = $('[data-v="result"]'); v.querySelector('.
 function act(a) {
   if (a === 'water') {
     if (STEPS[st.step].key === 'attach' || STEPS[st.step].key === 'wire') return warn('지금은 물이 필요 없어요', 1000);
-    if (st.wet > 0.72) { st.soak = clamp(st.soak + (st.mode === 'real' ? 0.16 : 0.04), 0, 1); st.pool = clamp(st.pool + 0.12, 0, 1); warn(st.soak > 0.4 ? '물이 너무 많아요! 흙이 약해지고 있어요' : '이미 충분히 젖어 있어요', 1400); }
+    if (st.wet > 0.85) { st.soak = clamp(st.soak + (st.mode === 'real' ? 0.09 : 0.02), 0, 1); st.pool = clamp(st.pool + 0.1, 0, 1); warn(st.soak > CLAYS[st.clay].soak * 0.6 ? '물이 너무 많아요! 흙이 약해지고 있어요' : '이미 충분히 젖어 있어요', 1400); }
     else warn('촉촉 💧', 700);
     st.wet = 1; if (st.opened) st.pool = clamp(st.pool + 0.05, 0, 1);
     splashT = 0.6; if (st.mode === 'real' && st.opened) collapseCheck();
@@ -576,15 +595,20 @@ host.querySelectorAll('.tw-mode button').forEach(b => b.onclick = () => { st.mod
 // 기물 고르기 카드 (실루엣 미리보기)
 const vesBox = $('.tw-ves');
 vesBox.innerHTML = Object.keys(VESSELS).map(k => `<button data-v="${k}" class="${k === st.vessel ? 'on' : ''}"><canvas width="104" height="124"></canvas>${VESSELS[k].name}</button>`).join('');
-vesBox.querySelectorAll('button').forEach(b => {
+function paintVessels() { vesBox.querySelectorAll('button').forEach(b => {
   const v = VESSELS[b.dataset.v], c = b.querySelector('canvas'), g = c.getContext('2d'), sc = 44, base = 116;
-  g.fillStyle = '#c99a72'; g.beginPath(); g.moveTo(52, base);
+  g.clearRect(0, 0, c.width, c.height); g.fillStyle = CLAYS[st.clay].dry; g.beginPath(); g.moveTo(52, base);
   for (let i = 0; i <= 40; i++) { const u = i / 40; g.lineTo(52 + v.prof(u) * sc * 1.05, base - u * v.H * sc * 1.25); }
   for (let i = 40; i >= 0; i--) { const u = i / 40; g.lineTo(52 - v.prof(u) * sc * 1.05, base - u * v.H * sc * 1.25); }
-  g.closePath(); g.fill();
+  g.closePath(); g.fill(); g.strokeStyle = 'rgba(80,60,45,.45)'; g.lineWidth = 2; g.stroke();
   b.onclick = () => { st.vessel = b.dataset.v; vesBox.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); };
-});
+}); }
+paintVessels();
 
+const clayBox = $('.tw-clays'), clayDesc = $('.tw-clay-desc');
+clayBox.innerHTML = Object.keys(CLAYS).map(k => `<button data-c="${k}" class="${k === st.clay ? 'on' : ''}"><i style="background:${CLAYS[k].dry}"></i>${CLAYS[k].name}<small>${CLAYS[k].level}</small></button>`).join('');
+clayDesc.textContent = CLAYS[st.clay].desc;
+clayBox.querySelectorAll('button').forEach(b => b.onclick = () => { st.clay = b.dataset.c; clayBox.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); clayDesc.textContent = CLAYS[st.clay].desc; paintVessels(); });
 /* ---------- 초기화 · 열기 · 닫기 ---------- */
 function reset() {
   Object.assign(st, { step: 0, speed: 0, wet: 0.7, soak: 0, pool: 0, wobble: 0.6, dryHits: 0, speedMiss: 0, lumpR: 0.72, lumpH: 0.62, cone: 0, coneCycles: 0, coneDir: 0,
@@ -686,10 +710,11 @@ function loop(now) {
   const ox = k === 'attach' ? st.attachX : Math.cos(st.rot) * wob * 0.07, oz = k === 'attach' ? st.attachZ : Math.sin(st.rot) * wob * 0.07;
   clayGroup.position.set(ox, k === 'attach' && !st.attached ? 0.35 : 0, oz);
   clayMat.roughness = lerp(0.85, 0.28, st.wet); clayMat.clearcoat = lerp(0.05, 0.6, st.wet);
-  clayMat.color.set(st.wet > 0.4 ? '#b98f6b' : '#cdaa86');
-  if (st.speed > 0.05 && st.active && st.step > 0 && st.step < 7) st.wet = Math.max(0, st.wet - dt * 0.012);
+  clayMat.color.set(st.wet > 0.4 ? CLAYS[st.clay].wet : CLAYS[st.clay].dry);
+  if (st.speed > 0.05 && st.active && st.step > 0 && st.step < 7) st.wet = Math.max(0, st.wet - dt * 0.012 * CLAYS[st.clay].dry_rate);
   slip.material.opacity = clamp(0.15 + st.soak * 0.5 + st.step * 0.05, 0, 0.6) * (st.step > 0 ? 1 : 0);
   if (splashT > 0) splashT -= dt;
+  st.soak = Math.max(0, st.soak - dt * 0.012);
   if (st.mode === 'easy') st.speed += ((STEPS[st.step].speed[0] + STEPS[st.step].speed[1]) / 2 - st.speed) * Math.min(1, dt * 3);
   placeHands(now);
   // 게이지
