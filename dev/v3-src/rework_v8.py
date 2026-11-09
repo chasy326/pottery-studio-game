@@ -40,7 +40,10 @@ craftMoveSub3=function(dx,dy,e){var t=tool();if(t==='open'||t==='pull'||t==='fre
   if(t==='open'&&cs3.view!=='top'){if(Math.abs(dx)>Math.abs(dy)*1.3)return _mv.call(this,dx*.6,0,e);return _mv.call(this,0,dy,e);}
   if(t==='pull'){var st=craftTargetState3(),T=tgt(),dH=-dy*.0019;
     if(gOn()&&dH>0&&st.H>T.H-.005)dH*=Math.max(.06,.3*(1-(st.H-T.H)/.2));
-    var lean=dx*cs3.side*.0022;var ok=craftCommit3(cPull(st,dH,lean));if(ok&&gOn())assist(Math.min(.3,Math.abs(dH)*3.4+Math.abs(lean)*1.5));return;}
+    var lean=dx*cs3.side*.0022;
+    if(gOn()){var rimGap=cInterp(T.r,1)-st.r[CN];if(lean*rimGap<0)lean*=.05;else if(Math.abs(lean)>Math.abs(rimGap))lean=rimGap;
+      if(dH>0&&st.H>T.H+.01)dH=0;if(Math.abs(dx)>Math.abs(dy)*.8&&st.H>T.H+.008)dH=Math.min(dH,-Math.min(st.H-T.H,Math.abs(dx)*.0035));}
+    var ok=craftCommit3(cPull(st,dH,lean));if(ok&&gOn())assist(Math.min(.3,Math.abs(dH)*3.4+Math.abs(lean)*1.5));return;}
   if(t==='free'){if(cs3.__lockPid!==cs3.activePointer||cs3.__lockPid==null){cs3.__lockPid=cs3.activePointer;cs3.__lockBand=cs3.band;}if(cs3.__lockBand!=null)cs3.band=cs3.__lockBand;var s2=craftTargetState3(),delta=dx*cs3.side*.0013;if(gOn()){var T2=tgt(),bt=cs3.band/CN,yAbs=bt*s2.H,tr=yAbs<=T2.H?cInterp(T2.r,yAbs/T2.H):null,cr=cInterp(s2.r,bt);if(tr!=null){var gap=tr-cr;if(gap*delta<0)delta*=.4;else if(Math.abs(delta)>Math.abs(gap))delta=gap+(delta-gap)*.35;}}if(craftCommit3(cFree(s2,cs3.band,delta))&&gOn())assist(Math.min(.12,Math.abs(delta)*5));return;}
   return _mv.apply(this,arguments);};
 /* --- 가이드: 맞는 곳은 초록, 다른 곳은 주황 + 일치율 --- */

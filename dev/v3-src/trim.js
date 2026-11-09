@@ -102,14 +102,15 @@ function buildTool(kind){toolMats();var g=new THREE.Group(),M_=THREE.Mesh,tip;
   else if(kind==='loop'){var pts=[[0,0],[.13,.02],[.17,.3],[.2,.9],[.19,1.5],[.15,1.95],[.09,2.15],[0,2.2]].map(function(p){return new THREE.Vector2(p[0],p[1]);});var h=new M_(new THREE.LatheGeometry(pts,24),woodMat);h.rotation.z=Math.PI/2;h.position.x=2.3;g.add(h);var f=new M_(new THREE.CylinderGeometry(.13,.13,.32,20),brass);f.rotation.z=Math.PI/2;g.add(f);var ring=new M_(new THREE.TorusGeometry(.42,.045,10,40),steel);ring.position.set(-.85,0,0);ring.rotation.x=-.5;g.add(ring);var a=new M_(new THREE.CylinderGeometry(.04,.04,.5,8),steelDark);a.rotation.z=Math.PI/2;a.position.set(-.3,0,.06);g.add(a);var b=a.clone();b.position.z=-.06;g.add(b);tip=new THREE.Vector3(-1.27,0,0);}
   else{var rod=new M_(new THREE.CylinderGeometry(.075,.075,3.1,16),knurlMat);rod.rotation.z=Math.PI/2;rod.position.x=.75;g.add(rod);var cap=new M_(new THREE.CylinderGeometry(.09,.09,.2,16),steel);cap.rotation.z=Math.PI/2;cap.position.x=-.8;g.add(cap);var path=new THREE.CatmullRomCurve3([new THREE.Vector3(-.86,.05,0),new THREE.Vector3(-1,.3,-.05),new THREE.Vector3(-1.55,.02,-.1),new THREE.Vector3(-1,-.26,-.05),new THREE.Vector3(-.86,-.05,0)]);g.add(new M_(new THREE.TubeGeometry(path,50,.035,8,false),steel));tip=new THREE.Vector3(-1.55,.02,-.1);}
   g.children.forEach(function(c){c.position.sub(tip);});
-  var w=new THREE.Group();w.add(g);w.scale.setScalar(.26);w.userData.inner=g;w.visible=false;return w;}
+  g.traverse(function(o){if(o.isMesh){o.material=o.material.clone();o.material.depthTest=false;o.material.depthWrite=false;o.renderOrder=20;}});
+  var w=new THREE.Group();w.add(g);w.scale.setScalar(.22);w.userData.inner=g;w.visible=false;return w;}
 var toolModels={};
 function showTool(kind,pos,side,onBottom,press){Object.keys(toolModels).forEach(function(k){toolModels[k].visible=false;});if(!pos)return;var m=toolModels[kind]||(toolModels[kind]=buildTool(kind));if(m.parent!==grp)grp.add(m);m.visible=true;m.position.copy(pos);
   var inner=m.userData.inner;inner.rotation.set(0,0,0);
   // handle points away from the pot; tilt depends on surface
-  m.rotation.set(0,side>0?Math.PI:0,0);
-  inner.rotation.z=-(onBottom?.95:.38);inner.rotation.x=.25;
-  m.scale.setScalar(.26*(1-.05*press));}
+  m.rotation.set(0,side>0?-.4:Math.PI+.4,0);
+  inner.rotation.z=onBottom?.85:.3;inner.rotation.x=.2;
+  m.scale.setScalar(.22*(1-.06*press));}
 
 /* ribbons (apple-peel curls) */
 var ribGeos=null,ribMat=null;
@@ -128,7 +129,7 @@ function footProfile(kind){var r0=M.r0,H=M.H,dep=Math.min(.07,(M.f-TMIN)*.8),wal
   else{var Ro2=r0*.97,Ri2=Ro2-Math.min(.06,r0*.2);out=[[0,dep],[Ri2-.012,dep],[Ri2,.004],[Ro2,.004],[Ro2+.004,.085],[wallAt(.11)-.04,.11],[wallAt(.2)-.006,.2]];}
   return out;}
 function tubeAlong(points,rad){var path=new THREE.CurvePath();for(var i=1;i<points.length;i++)path.add(new THREE.LineCurve3(points[i-1],points[i]));return new THREE.TubeGeometry(path,points.length*6,rad,5,false);}
-function buildGuide(){if(guideGrp){scene3.remove(guideGrp);guideGrp=null;}guideGrp=new THREE.Group();var prof=footProfile(TR.foot),m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.6,depthTest:false});
+function buildGuide(){if(guideGrp){scene3.remove(guideGrp);guideGrp=null;}guideGrp=new THREE.Group();var prof=footProfile(TR.foot),m=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.3,depthTest:false});
   var cut=0;prof.forEach(function(p,i){if(p[1]<=.005)cut=i;});prof=prof.slice(cut);
   [1,-1].forEach(function(sd){var pts=prof.map(function(p){return new THREE.Vector3(sd*p[0],p[1],.0);});var t=new THREE.Mesh(tubeAlong(pts,.0032),m);t.renderOrder=6;guideGrp.add(t);});
   // rings on the bottom face
@@ -288,18 +289,28 @@ function findContact(x,y){var h=hitPotRay(x,y),best=-1,bd=1e9,side=1,world=null,
   if(best<0)return null;var pt=M.pts[best];return {j:best,side:side,world:world,bottom:pt.ny>.7};}
 function shapeF(kind,u){u=Math.abs(u);if(u>=1)return 0;if(kind==='flat')return u<.7?1:.5+.5*Math.cos((u-.7)/.3*Math.PI);if(kind==='round')return Math.sqrt(1-u*u);return Math.pow(1-u,1.4);}
 var thinT=0,ribAcc=0;
-function carveStep(dt){if(TR.phase!=='carve'||!P.down||P.id===null){if(scrape)scrapeSet(0);return;}
+var peel=null,buzzT=0;
+function buzz(){var t=now();if(t-buzzT<70)return;buzzT=t;try{if(navigator.vibrate)navigator.vibrate(7);}catch(e){}}
+function peelPath(len,side){var pts=[],n=Math.max(4,Math.round(len/.004)),rad=.018;for(var i=0;i<=n;i++){var s=len*i/n,a=s/rad,rr=rad*(1+s*1.2);pts.push(new THREE.Vector3(side*(rr*Math.sin(a)+s*.35),-rr*(1-Math.cos(a))-s*.12,s*.3));}return new THREE.CatmullRomCurve3(pts);}
+function peelGrow(ct,removed){if(!ribMat)ribMat=new THREE.MeshStandardMaterial({color:new THREE.Color(TR.dryColor||clayBase()).multiplyScalar(.82),roughness:.9});
+  if(!peel){peel={len:.006,built:0,side:ct.side,mesh:new THREE.Mesh(new THREE.BufferGeometry(),ribMat),last:now()};grp.add(peel.mesh);}
+  peel.last=now();peel.len+=removed*9;peel.mesh.position.copy(ct.world);
+  if(peel.len-peel.built>.006){peel.built=peel.len;var w=TOOLS[TR.tool].w,g=new THREE.TubeGeometry(peelPath(peel.len,peel.side),Math.max(6,Math.round(peel.len/.004)),.0028+w*.05,5,false);g.scale(1,1,1);var o=peel.mesh.geometry;peel.mesh.geometry=g;if(o)o.dispose();}
+  if(peel.len>.32)peelDrop();}
+function peelIdle(){if(peel&&now()-peel.last>180)peelDrop();}
+function peelDrop(){if(!peel)return;var m=peel.mesh;if(peel.len<.012){grp.remove(m);peel=null;return;}m.userData={vx:peel.side*(.003+Math.random()*.003),vy:.002,vz:.004,spin:(Math.random()-.5)*.12,life:0};pieces.push(m);if(pieces.length>40){var o=pieces.shift();grp.remove(o);}peel=null;}
+function carveStep(dt){if(TR.phase!=='carve'||!P.down||P.id===null){if(scrape)scrapeSet(0);peelIdle();return;}
   var tl=TOOLS[TR.tool],sec=dt/60;
   var mv=Math.hypot(P.x-P.lx,P.y-P.ly);P.lx=P.x;P.ly=P.y;if(mv<1.5*dt)P.still+=sec;else P.still=Math.max(0,P.still-sec*3);
-  var ct=findContact(P.x,P.y-44);P.contact=ct;
+  var ct=findContact(P.x,P.y);P.contact=ct;
   if(!ct){showTool(null);scrapeSet(0);return;}
   var press=clamp(P.still/.7,0,1);// long-press digs deeper
   showTool(TR.tool,ct.world,ct.side,ct.bottom,press);
   if(TR.locked){bubble();scrapeSet(0);return;}
   var spd=.35+.65*(TR.speed/.0157),mult=(mv>1.5*dt?.75:1)*(1+1.2*press)*spd,removed=0,hitLim=false,j0=ct.j,s0=M.pts[j0].s,halfN=Math.ceil(tl.w/M.ds)+1;
   for(var j=Math.max(0,j0-halfN);j<=Math.min(M.pts.length-1,j0+halfN);j++){var p=M.pts[j],f=shapeF(tl.shape,(p.s-s0)/tl.w);if(f<=0)continue;var add=tl.rate*sec*mult*f;var nd=Math.min(p.lim,p.d+add);removed+=nd-p.d;p.d=nd;if(p.lim>0&&p.d>=p.lim*.94&&f>.6)hitLim=true;}
-  if(removed>0){TR.carveSec+=sec;dirty=true;ribAcc+=removed;if(ribAcc>.0018){spawnRibbon(ct.world,ct.side,ribAcc*130);ribAcc=0;}}
-  scrapeSet(removed>0?clamp(.35+press*.4+mv*.02,0,1):.08);
+  if(removed>0){TR.carveSec+=sec;dirty=true;peelGrow(ct,removed);buzz();}else peelIdle();
+  scrapeSet(removed>0?clamp(.35+press*.4+mv*.02,0,1)*(.72+.28*Math.abs(Math.sin(TR.spin*2))):.08);
   if(hitLim&&now()-thinT>1200){thinT=now();sndTok();TR.shake=.004;if(now()-(TR.capT||0)>5000){TR.capT=now();caption('통통! 여기는 충분히 얇아졌어요',1500);}}
   if(TR.carveSec>=LIMIT_SEC&&!TR.locked){TR.locked=true;scrapeStop();bubble();syncUI();}
 }

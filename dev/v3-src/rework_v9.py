@@ -18,12 +18,14 @@ function pg(){try{return potGroup3}catch(e){return null}}
 function tool(){try{return currentTool}catch(e){return null}}
 /* ---- 위쪽 시점: 살짝 기울여서 입체감 + 옆에서 비추는 빛 ---- */
 var EL=THREE.MathUtils.degToRad(74);
-function topCam(){if(!window.cs3||cs3.view!=='top'||(window.__sosoTrim&&__sosoTrim.active))return;try{potGroup3.updateMatrixWorld(true);var b=new THREE.Box3().setFromObject(potMesh3),c=b.getCenter(new THREE.Vector3()),R=Math.max(b.max.x-b.min.x,b.max.z-b.min.z)/2,h=b.max.y-b.min.y,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
-  var D=(R*2*1.45)/(2*tanH*aspect),tgt=new THREE.Vector3(c.x,c.y,c.z);try{wheelGroup3.visible=true;}catch(e){}
-  camera3.position.set(tgt.x,tgt.y+D*Math.sin(EL),tgt.z+D*Math.cos(EL));camera3.up.set(0,1,0);camera3.lookAt(tgt);camera3.zoom=1;camera3.setViewOffset(W,H,0,Math.round(H*.09),W,H);camera3.updateProjectionMatrix();camera3.updateMatrixWorld(true);}catch(e){}}
+var camT=null,camP=null;
+function topCam(snap){if(!window.cs3||cs3.view!=='top'||(window.__sosoTrim&&__sosoTrim.active))return;try{var P=potGroup3.position,k=potGroup3.scale.x,R=Math.max.apply(null,radiusProfile)*k,h=heightScale*k,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
+  var D=(R*2*1.5)/(2*tanH*aspect),tgt=new THREE.Vector3(P.x,P.y+h*.55,P.z),pos=new THREE.Vector3(tgt.x,tgt.y+D*Math.sin(EL),tgt.z+D*Math.cos(EL));
+  if(snap||!camT){camT=tgt.clone();camP=pos.clone();}else{camT.lerp(tgt,.08);camP.lerp(pos,.08);}
+  try{wheelGroup3.visible=true;}catch(e){}camera3.position.copy(camP);camera3.up.set(0,1,0);camera3.lookAt(camT);camera3.zoom=1;camera3.setViewOffset(W,H,0,Math.round(H*.09),W,H);camera3.updateProjectionMatrix();camera3.updateMatrixWorld(true);}catch(e){}}
 function clearOffset(){try{if(camera3.view&&camera3.view.enabled&&!(window.__sosoTrim&&__sosoTrim.active)){camera3.clearViewOffset();camera3.updateProjectionMatrix();}}catch(e){}}
-var _ang=angle;angle=function(){var r=_ang.apply(this,arguments);if(cs3.view==='top')topCam();else clearOffset();return r;};
-var _rig=craftApplyRig3;craftApplyRig3=function(){var r=_rig.apply(this,arguments);if(window.cs3&&cs3.view==='top')topCam();else clearOffset();return r;};
+var _ang=angle;angle=function(){clearOffset();var r=_ang.apply(this,arguments);if(cs3.view==='top')topCam(true);else{clearOffset();camT=null;}return r;};
+var _rig=craftApplyRig3;craftApplyRig3=function(){clearOffset();var r=_rig.apply(this,arguments);if(window.cs3&&cs3.view==='top')topCam(true);return r;};
 var L0=null,lightMode='';
 function lights(top){try{if(!L0){L0=[];scene3.children.forEach(function(o){if(o.isLight)L0.push({o:o,i:o.intensity,p:o.position.clone()});});}var want=top?'top':'base';if(!top&&lightMode===want)return;lightMode=want;
   L0.forEach(function(l){l.o.intensity=l.i;l.o.position.copy(l.p);if(!top)return;if(l.o.isHemisphereLight)l.o.intensity=.34;else if(l.i>.8){l.o.intensity=1.75;l.o.position.set(-5,1.7,2.4);}else{l.o.intensity=.3;l.o.position.set(4,2.5,-2);}});
@@ -43,7 +45,7 @@ function loop(){requestAnimationFrame(loop);try{var mode=document.getElementById
   mode.classList.toggle('soso-topview',cs3.view==='top'&&!trim);if(cs3.view==='top'&&!trim)topCam();
   if(cs3.view==='top'&&!trim&&!cs3.isTrim&&(dragging||cs3.activePointer!=null)){/* camera stays fixed while touching */}
   var k=vessel+':'+(cs3.freeMode?'f':cs3.step);
-  if(vessel==='plate'&&cs3.centered&&!cs3.cut&&!trim&&(cs3.step===3||cs3.freeMode)&&cs3.view!=='top'&&!autoKey&&!dragging){autoKey=k;angle('위쪽');}
+  /* plate: no automatic view switch (follow the real process in front view) */
   if(!(vessel==='plate'))autoKey='';
 }catch(e){}}
 requestAnimationFrame(loop);
