@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2b2724">
+<title>흙마루 v4 | 작업실</title>
+<link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body>
+<div id="world" aria-label="흙마루 3D 작업실"></div>
+
+<header class="top">
+  <div class="brand"><span class="mark">흙</span><b>흙마루</b></div>
+  <div class="topR"><div class="place"><i class="dot"></i><span id="placeName">물레 작업실</span></div><button class="mini" id="changeChar">캐릭터 바꾸기</button></div>
+</header>
+
+<div class="hint" id="hint">바닥을 누르거나 WASD로 걸어요</div>
+<div class="bubble" id="bubble" hidden></div>
+
+<nav class="dock" id="dock">
+  <button class="pill primary" id="sitBtn">물레에 앉기</button>
+</nav>
+
+<div class="pick" id="pick" hidden>
+  <div class="pickCard">
+    <h2>누구로 빚을까요?</h2>
+    <p>공방에서 함께할 도예가를 골라 주세요</p>
+    <div class="pickRow">
+      <button class="who" data-k="A"><img src="/chars/A_big.png" alt="캐릭터 1"><span>캐릭터 1</span></button>
+      <button class="who" data-k="B"><img src="/chars/B_big.png" alt="캐릭터 2"><span>캐릭터 2</span></button>
+    </div>
+  </div>
+</div>
+
+<script src="/three.min.js"></script>
+<script src="/studio.js?v=12"></script>
+<script src="/throw.js?v=1"></script>
+</body>
+</html>
