@@ -63,13 +63,21 @@ const css = document.createElement('style'); css.textContent = `
 .tw-track em{position:absolute;left:0;right:0;background:#9fc39b40;border-top:1px solid #9fc39b;border-bottom:1px solid #9fc39b}
 .tw-track i{position:absolute;left:3px;right:3px;height:22px;border-radius:8px;background:#f3ece2;box-shadow:0 2px 8px #0006}
 .tw-pedal.auto{opacity:.55}
+.tw-pedal .kbd,.tw-dock .kbd{font-size:10px;color:#a99b8b;font-weight:600}
+.tw-dock .kbd{margin-left:6px;padding:1px 5px;border:1px solid #ffffff33;border-radius:5px}
+.tw-pedal.drift{box-shadow:0 0 0 2px #e2683f}
+.tw-sec-view{position:absolute;left:14px;top:262px;width:132px;background:#1f1b18cc;border:1px solid #ffffff1f;border-radius:12px;padding:6px 6px 4px;pointer-events:none}
+.tw-sec-view[hidden]{display:none}
+.tw-sec-view b{display:block;font-size:11px;color:#e9dfd1;margin:0 0 2px 4px}
+.tw-sec-view canvas{width:120px;height:136px;display:block}
+.tw-coning{letter-spacing:2px}
 .tw-dock{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);display:flex;gap:8px;padding:8px;border-radius:999px;background:#1f1c1acc;border:1px solid #ffffff1c}
 .tw-dock button,.tw-card button{font-family:inherit;font-size:14px;font-weight:700;padding:12px 18px;border-radius:999px;border:1px solid #ffffff38;background:#3a3430;color:#f6efe4;cursor:pointer;white-space:nowrap}
 .tw-dock button.pri{background:#f3ece2;color:#2f2925;border-color:#f3ece2}
 .tw-card button{background:#efe6d8;color:#3a2f27;border-color:#d9cbb6}
 .tw-card button.pri{background:#3a2f27;color:#fff;border-color:#3a2f27}
 .tw-dock button:disabled{opacity:.35;cursor:default}
-.tw-tools{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);display:flex;gap:8px}
+.tw-tools{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);display:flex;gap:8px}
 .tw-tools[hidden]{display:none}
 .tw-tools button{font-family:inherit;width:74px;padding:9px 0 7px;border-radius:16px;border:1px solid #ffffff2b;background:#1f1b18d9;color:#efe6d8;font-size:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
 .tw-tools button svg{width:26px;height:26px}
@@ -99,13 +107,15 @@ const css = document.createElement('style'); css.textContent = `
 .tw-scores div{display:flex;justify-content:space-between;border-bottom:1px dashed #d9cdbb;padding-bottom:3px}
 .tw-say{background:#efe5d6;border-radius:14px;padding:10px 12px;font-size:13px;margin-bottom:14px;text-align:left}
 .tw-fail{font-size:40px;margin-bottom:4px}
+@media (max-width:700px), (pointer:coarse){ .tw-pedal .kbd,.tw-dock .kbd{display:none} }
 @media (max-width:700px){
- .tw-gauges{width:108px;top:auto;bottom:168px;left:8px;gap:6px}.tw-g{padding:6px 8px}
+ .tw-sec-view{top:96px;left:auto;right:8px;width:92px;padding:4px}.tw-sec-view canvas{width:84px;height:96px}.tw-sec-view b{font-size:10px}
+ .tw-gauges{width:104px;top:96px;bottom:auto;left:8px;gap:6px}.tw-g{padding:6px 8px}
  .tw-pedal{right:8px;padding:8px 6px}.tw-track{height:160px;width:28px}
  .tw-tip{bottom:150px;font-size:13px;border-radius:16px}
  .tw-dock{bottom:14px;flex-wrap:wrap;justify-content:center;border-radius:22px;width:calc(100vw - 20px)}
  .tw-dock button{padding:10px 13px;font-size:13px}
- .tw-tools{bottom:208px}.tw-tools button{width:62px}
+ .tw-tools{bottom:236px}.tw-tools button{width:62px}
  .tw-ves{grid-template-columns:repeat(3,1fr)}.tw-clays{grid-template-columns:repeat(2,1fr)}.tw-card{max-height:92vh;overflow:auto}
  .tw-chip{font-size:10px;padding:4px 7px}
 }`;
@@ -120,11 +130,12 @@ host.innerHTML = `
   <div class="tw-g" data-g="wobble"><b>흔들림 <span></span></b><div class="tw-bar"><em style="left:0;width:15%"></em><i style="background:#e2a35f"></i></div></div>
   <div class="tw-g" data-g="extra"><b><span class="lbl">바닥 두께</span> <span class="val"></span></b><div class="tw-bar"><em></em><i style="background:#c9a27a"></i></div></div>
 </div>
-<div class="tw-pedal"><span>페달</span><div class="tw-track"><em></em><i></i></div><span class="spd">0%</span></div>
+<div class="tw-pedal"><span>페달</span><div class="tw-track"><em></em><i></i></div><span class="spd">0%</span><small class="kbd">↑↓ 키</small></div>
+<div class="tw-sec-view"><b>단면</b><canvas width="150" height="170"></canvas></div>
 <div class="tw-tools" hidden></div>
 <div class="tw-tip"></div>
 <div class="tw-dock">
-  <button data-a="water">💧 물 묻히기</button>
+  <button data-a="water">💧 물 묻히기<small class="kbd">Space</small></button>
   <button data-a="next" class="pri">다음 단계</button>
   <button data-a="redo">다시 빚기</button>
   <button data-a="leave">일어서기</button>
@@ -183,20 +194,37 @@ const clay = new THREE.Mesh(new THREE.BufferGeometry(), clayMat); clay.castShado
 const wireLine = mesh(new THREE.CylinderGeometry(0.008, 0.008, 3, 6), M('#d9d9d9', 0.3, 0.8), 0, 0.02, 0); wireLine.rotation.z = Math.PI / 2; wireLine.visible = false;
 
 /* ---------- 손과 도구 ---------- */
+/* 손: 원점 = 가운데 손가락 끝(흙에 닿는 점). 손가락은 로컬 +X 방향, 손목·팔은 -X 쪽.
+   pose 그룹을 X축으로 굴려(roll) 손가락이 세로로 쌓이거나(0) 앞뒤로 쌓이게(π/2) 한다. */
+const FR = 0.032;                                     // 손가락 반지름 = 흙에서 띄우는 거리
 function makeHand(skin) {
-  const g = new THREE.Group(), sk = M(skin, 0.65);
-  const palm = mesh(new THREE.SphereGeometry(1, 28, 20), sk, 0, 0, 0, g); palm.scale.set(0.2, 0.25, 0.13);
-  const th = mesh(new THREE.CapsuleGeometry(0.055, 0.12, 6, 10), sk, 0.16, 0.06, 0.05, g); th.rotation.z = -0.9;
-  const arm = mesh(new THREE.CapsuleGeometry(0.13, 0.9, 6, 12), M('#e9e1d3', 0.9), 0, -0.6, 0, g);
-  g.userData = { palm, th, arm }; S.add(g); return g;
+  const g = new THREE.Group(), pose = new THREE.Group(); g.add(pose);
+  const sk = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.62, transparent: true, opacity: 1 });
+  const sleeve = new THREE.MeshStandardMaterial({ color: '#e9e1d3', roughness: 0.9, transparent: true, opacity: 1 });
+  const cap = (r, len, x, y, z, rz = 0, mat = sk) => { const m = mesh(new THREE.CapsuleGeometry(r, len, 6, 12), mat, x, y, z, pose); m.rotation.z = Math.PI / 2 + rz; return m; };
+  // 손가락 4개 (끝이 x=0 근처, 약간 둥글게 휘도록 길이 차이)
+  [[0.052, 0.15, -0.004], [0.017, 0.17, 0], [-0.018, 0.16, -0.006], [-0.052, 0.13, -0.02]].forEach(([y, len, dx]) => cap(FR * (y < -0.04 ? 0.85 : 1), len, -len / 2 - FR + dx, y, 0));
+  const palm = mesh(new THREE.SphereGeometry(1, 24, 16), sk, -0.29, 0, 0, pose); palm.scale.set(0.13, 0.095, 0.05);
+  const thumb = cap(FR * 1.1, 0.11, -0.2, 0.1, 0.03, -0.75);
+  const wrist = cap(0.075, 0.12, -0.44, 0, 0);
+  const arm = cap(0.1, 0.5, -0.82, 0, 0, 0, sleeve);
+  g.userData = { pose, mats: [sk, sleeve], arm, skin: sk };
+  S.add(g); return g;
+}
+/* 손 놓기: tip = 닿는 점(월드), dir = 손가락이 향하는 방향 각도(XY 화면 평면, 0=오른쪽, -90=아래), roll = 손가락 쌓임(0 세로 / 1 앞뒤) */
+function poseHand(h, tip, dirDeg, roll = 0, alpha = 1, yaw = 0) {
+  h.visible = true; h.position.copy(tip); h.scale.setScalar(0.85);
+  h.rotation.set(0, yaw, dirDeg * Math.PI / 180);
+  h.userData.pose.rotation.x = roll * Math.PI / 2;
+  h.userData.mats.forEach(m => { m.opacity = alpha; m.depthWrite = alpha > 0.9; });
 }
 let handL, handR;
 const tools = (() => {
   const t = {};
-  t.sponge = new THREE.Group(); mesh(new THREE.BoxGeometry(0.34, 0.16, 0.24), M('#e6c35c', 1), 0, 0, 0, t.sponge);
+  t.sponge = new THREE.Group(); mesh(new THREE.BoxGeometry(0.22, 0.1, 0.16), M('#e6c35c', 1), 0, 0, 0, t.sponge);
   t.needle = new THREE.Group(); mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.42, 12), M('#b07d4f', 0.7), 0, 0.25, 0, t.needle); mesh(new THREE.CylinderGeometry(0.008, 0.004, 0.32, 6), M('#ddd', 0.3, 0.9), 0, -0.1, 0, t.needle);
-  t.rib = new THREE.Group(); const rb = mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 3), M('#c8955c', 0.7), 0, 0, 0, t.rib); rb.rotation.x = Math.PI / 2;
-  t.chamois = new THREE.Group(); mesh(new THREE.BoxGeometry(0.3, 0.02, 0.18), M('#e7d6b4', 1), 0, 0, 0, t.chamois);
+  t.rib = new THREE.Group(); { const sh = new THREE.Shape(); sh.moveTo(-0.125, 0.11); sh.quadraticCurveTo(-0.14, 0, -0.125, -0.11); sh.lineTo(0.12, -0.08); sh.quadraticCurveTo(0.16, 0, 0.12, 0.08); sh.closePath(); mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.025, bevelEnabled: false }), M('#c8955c', 0.7), 0, 0, -0.012, t.rib); }
+  t.chamois = new THREE.Group(); mesh(new THREE.BoxGeometry(0.2, 0.025, 0.2), M('#e7d6b4', 1), 0, 0, 0, t.chamois);
   t.wireL = new THREE.Group(); mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 10), M('#7a5434', 0.7), 0, 0, 0, t.wireL);
   t.wireR = t.wireL.clone();
   Object.values(t).forEach(o => { o.visible = false; o.traverse(m => { if (m.isMesh) m.castShadow = true; }); S.add(o); });
@@ -213,7 +241,7 @@ const st = {
   // 열린 뒤
   H: 0.6, r: new Float32Array(N), t: new Float32Array(N), pulls: 0, uneven: 0, rimRough: 0, failed: null,
   finish: { sponge: false, needle: false, rib: false, chamois: false }, tool: null, wireCut: 0, shapeScore: 0,
-  drag: null, warnUntil: 0, onExit: null, say: null, opened: false
+  drag: null, warnUntil: 0, onExit: null, say: null, opened: false, demoT0: 0, lastInput: 0, demoOn: false, shapeMode: 'out', drift: 0
 };
 const VOL0 = Math.PI * 0.72 * 0.72 * 0.62 * 0.78;
 
@@ -255,7 +283,7 @@ function tAt(y) { const i = clamp(y / st.H * (N - 1), 0, N - 1), a = Math.floor(
 /* ---------- HUD ---------- */
 const chips = $('.tw-top');
 function renderChips() {
-  chips.innerHTML = STEPS.map((s, i) => `<span class="tw-chip ${i === st.step ? 'on' : i < st.step ? 'done' : ''}">${i < st.step ? '✓ ' : ''}${s.label}${s.key === 'pull' && i === st.step ? ` ${st.pulls}/${VESSELS[st.vessel].pulls}` : ''}</span>`).join('') +
+  chips.innerHTML = STEPS.map((s, i) => `<span class="tw-chip ${i === st.step ? 'on' : i < st.step ? 'done' : ''}">${i < st.step ? '✓ ' : ''}${s.label}${s.key === 'pull' && i === st.step ? ` ${Math.min(st.pulls, VESSELS[st.vessel].pulls)}/${VESSELS[st.vessel].pulls}${st.pulls > VESSELS[st.vessel].pulls ? ' +' + (st.pulls - VESSELS[st.vessel].pulls) : ''}` : ''}</span>`).join('') +
     `<span class="tw-badge ${st.mode === 'easy' ? 'easy' : ''}">${CLAYS[st.clay].name} ${VESSELS[st.vessel].name} · ${st.mode === 'easy' ? '쉬움' : '실전'}</span>`;
 }
 const tipEl = $('.tw-tip'), warnEl = $('.tw-warn');
@@ -278,7 +306,7 @@ function renderPedal() {
 }
 let pedalDrag = false;
 function pedalFromEvent(e) { const r = track.getBoundingClientRect(); st.speed = clamp(1 - (e.clientY - r.top) / r.height, 0, 1); }
-track.addEventListener('pointerdown', e => { if (st.mode === 'easy') return warn('쉬움 모드는 속도가 자동이에요', 1200); pedalDrag = true; track.setPointerCapture(e.pointerId); pedalFromEvent(e); e.stopPropagation(); });
+track.addEventListener('pointerdown', e => { if (st.mode === 'easy') return warn('쉬움 모드는 속도가 자동이에요', 1200); pedalDrag = true; st.autoPedal = false; track.setPointerCapture(e.pointerId); pedalFromEvent(e); e.stopPropagation(); });
 track.addEventListener('pointermove', e => { if (pedalDrag) pedalFromEvent(e); });
 track.addEventListener('pointerup', () => { pedalDrag = false; });
 function speedOK() { const s = STEPS[st.step].speed; return st.speed >= s[0] - 0.02 && st.speed <= s[1] + 0.02; }
@@ -290,6 +318,10 @@ const ICON = {
   rib: '<svg viewBox="0 0 24 24"><path d="M4 18 L20 18 L12 5 Z" fill="#c8955c"/></svg>',
   chamois: '<svg viewBox="0 0 24 24"><path d="M4 9c3-3 13-3 16 0v6c-3 3-13 3-16 0z" fill="#e7d6b4"/></svg>'
 };
+const SHAPE_ICON = {
+  out: '<svg viewBox="0 0 24 24"><path d="M8 4c-4 4-4 12 0 16M16 4c4 4 4 12 0 16" stroke="#c9a27a" stroke-width="2.4" fill="none"/><path d="M3 12h4M17 12h4M5 10l-2 2 2 2M19 10l2 2-2 2" stroke="#e9c35a" stroke-width="1.8" fill="none"/></svg>',
+  in: '<svg viewBox="0 0 24 24"><path d="M6 4c4 4 4 12 0 16M18 4c-4 4-4 12 0 16" stroke="#c9a27a" stroke-width="2.4" fill="none"/><path d="M1 12h5M18 12h5M4 10l2 2-2 2M20 10l-2 2 2 2" stroke="#e9c35a" stroke-width="1.8" fill="none"/></svg>'
+};
 const TOOL_INFO = {
   sponge: ['스펀지', '안쪽 바닥을 눌러 고인 물을 빨아내요'],
   needle: ['니들', '윗단을 옆으로 그어 들쭉날쭉한 입술을 잘라내요'],
@@ -297,7 +329,14 @@ const TOOL_INFO = {
   chamois: ['가죽', '입술(윗단)을 따라 옆으로 문질러 매끈하게 해요']
 };
 function renderTools() {
-  toolBar.hidden = STEPS[st.step].key !== 'finish';
+  const sk = STEPS[st.step].key;
+  if (sk === 'shape') {
+    toolBar.hidden = false;
+    toolBar.innerHTML = `<button data-s="out" class="${st.shapeMode === 'out' ? 'on' : ''}" style="width:110px">${SHAPE_ICON.out}부풀리기</button><button data-s="in" class="${st.shapeMode === 'in' ? 'on' : ''}" style="width:110px">${SHAPE_ICON.in}조이기</button>`;
+    toolBar.querySelectorAll('button').forEach(b => b.onclick = () => { st.shapeMode = b.dataset.s; st.demoT0 = performance.now(); tip(STEP_TIP.shape()); renderTools(); });
+    return;
+  }
+  toolBar.hidden = sk !== 'finish';
   toolBar.innerHTML = Object.keys(TOOL_INFO).map(k => `<button data-t="${k}" class="${st.tool === k ? 'on' : ''}">${ICON[k]}${TOOL_INFO[k][0]}${st.finish[k] ? ' ✓' : ''}</button>`).join('');
   toolBar.querySelectorAll('button').forEach(b => b.onclick = () => { st.tool = b.dataset.t; tip(TOOL_INFO[st.tool][1]); renderTools(); });
 }
@@ -305,18 +344,20 @@ function renderTools() {
 /* ---------- 단계 진행 ---------- */
 const STEP_TIP = {
   attach: () => '흙을 물레 가운데로 끌어다 놓아요. 가운데에 가까울수록 흔들림이 적어요',
-  center: () => st.mode === 'easy' ? '흙을 위로 끌어 올렸다가, 아래로 눌러 내려요 (코닝). 흔들림이 줄면 통과!' : '페달을 끝까지 밟고, 위로 끌어올렸다 아래로 눌러 내리기를 반복해요. 손이 뻑뻑하면 물!',
+  center: () => '흙을 아래에서 위로 끌어올려 기둥을 만들고, 다시 위에서 눌러 내려요 (코닝). ' + (st.mode === 'easy' ? '1번이면 통과!' : '2번 이상, 흔들림이 초록 칸에 오면 통과!'),
   open: () => '흙 가운데를 꾹 누르고 있어요. 바닥 두께가 초록 칸에 오면 손을 떼요',
   widen: () => '구멍 안쪽을 바깥으로 끌어 바닥을 넓혀요. 초록 칸까지!',
-  pull: () => `아래에서 위로 천천히 끌어 올려요 (1~2초). 벽 올리기 ${st.pulls}/${VESSELS[st.vessel].pulls}`,
-  shape: () => '점선을 보며 원하는 높이에서 바깥으로 밀면 배가 불룩, 안으로 밀면 목이 조여요',
+  pull: () => st.pulls >= VESSELS[st.vessel].pulls ? '벽 높이가 충분해요. 다음 단계로 가요 (한 번 더 올려도 돼요)' : `흙 아래쪽을 눌러 위로 천천히 끌어 올려요 (1~2초). ${st.pulls}/${VESSELS[st.vessel].pulls}번`,
+  shape: () => st.shapeMode === 'in' ? '조이기: 점선보다 넓은 높이를 문지르면 안으로 들어가요' : '부풀리기: 점선보다 좁은 높이를 문지르면 바깥으로 나와요',
   finish: () => '아래 도구로 마무리해요. 빨간 점이 있는 도구는 꼭 필요한 작업이에요',
   wire: () => '페달을 멈추고, 와이어를 바닥을 따라 옆으로 끝까지 그어 떼어내요'
 };
 function enterStep(i) {
   st.step = i; st.drag = null; st.tool = null;
   const k = STEPS[i].key;
-  if (st.mode === 'easy') st.speed = (STEPS[i].speed[0] + STEPS[i].speed[1]) / 2;
+  st.demoT0 = st.lastInput = performance.now();
+  st.speedTarget = (STEPS[i].speed[0] + STEPS[i].speed[1]) / 2; st.autoPedal = true;   // 단계 시작: 페달 자동으로 적정 속도
+  st.drift = 0;
   if (k === 'finish') {
     st.tool = 'sponge'; tip(TOOL_INFO.sponge[1]);
   } else tip(STEP_TIP[k]());
@@ -324,7 +365,7 @@ function enterStep(i) {
   wireLine.visible = k === 'wire';
   if (k === 'center') say('물 묻히고, 팔꿈치는 허벅지에 고정!');
   if (k === 'pull') say('안쪽 손과 바깥 손 사이 간격을 일정하게요');
-  if (k === 'shape') say('조금씩, 여러 번 나눠서 밀어요');
+  if (k === 'shape') { say('조금씩, 여러 번 나눠서 밀어요'); computeShapeScore(); st.shapeMode = (() => { let o = 0; for (let i = 0; i < N; i++) o += VESSELS[st.vessel].prof(i / (N - 1)) - st.r[i]; return o > 0 ? 'out' : 'in'; })(); tip(STEP_TIP.shape()); renderTools(); }
 }
 function canNext() {
   const k = STEPS[st.step].key, v = VESSELS[st.vessel];
@@ -358,12 +399,13 @@ function openUp() {                       // 덩어리 → 열린 형태로 전�
 /* ---------- 입력: 화면 → 흙 단면 좌표 ---------- */
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const plane = new THREE.Plane(), hit = V();
+function frontR() { return st.opened ? rAt(st.H * 0.5) * 0.85 : lumpRadius(st.lumpH * 0.5) * 0.85; }
 function toClay(e) {
   const r = cv.getBoundingClientRect();
   ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ndc, cam);
   const n = V(cam.position.x, 0, cam.position.z).normalize();
-  plane.setFromNormalAndCoplanarPoint(n, V(0, 0, 0));
+  plane.setFromNormalAndCoplanarPoint(n, n.clone().multiplyScalar(frontR()));   // 보이는 앞면 높이로 읽기
   if (!ray.ray.intersectPlane(plane, hit)) return null;
   const right = V(n.z, 0, -n.x);
   return { x: hit.dot(right), y: hit.y, gx: hit.x, gz: hit.z };
@@ -376,11 +418,11 @@ function groundHit(e) {
 cv.addEventListener('pointerdown', e => {
   if (!st.active || st.failed) return; cv.setPointerCapture(e.pointerId);
   const c = toClay(e); if (!c) return;
-  st.drag = { x0: c.x, y0: c.y, x: c.x, y: c.y, t0: performance.now(), lastX: c.x, lastY: c.y, minY: c.y, maxY: c.y, g: groundHit(e) };
+  st.drag = { x0: c.x, y0: c.y, x: c.x, y: c.y, t0: performance.now(), lastX: c.x, lastY: c.y, minY: c.y, maxY: c.y, g: groundHit(e), sx: e.clientX - cv.getBoundingClientRect().left, sy: e.clientY - cv.getBoundingClientRect().top }; st.lastInput = performance.now(); st.drift = (Math.random() < 0.5 ? -1 : 1) * 0.02;
   onDragStart(c);
 });
-cv.addEventListener('pointermove', e => { if (!st.drag) return; const c = toClay(e); if (!c) return; const d = st.drag; d.dx = c.x - d.lastX; d.dy = c.y - d.lastY; d.lastX = d.x; d.lastY = d.y; d.x = c.x; d.y = c.y; d.minY = Math.min(d.minY, c.y); d.maxY = Math.max(d.maxY, c.y); d.g = groundHit(e); onDragMove(c, d); d.lastX = c.x; d.lastY = c.y; });
-const endDrag = () => { if (!st.drag) return; onDragEnd(st.drag); st.drag = null; };
+cv.addEventListener('pointermove', e => { if (!st.drag) return; const c = toClay(e); if (!c) return; const d = st.drag; d.dx = c.x - d.lastX; d.dy = c.y - d.lastY; d.lastX = d.x; d.lastY = d.y; d.x = c.x; d.y = c.y; d.minY = Math.min(d.minY, c.y); d.maxY = Math.max(d.maxY, c.y); d.g = groundHit(e); d.sx = e.clientX - cv.getBoundingClientRect().left; d.sy = e.clientY - cv.getBoundingClientRect().top; onDragMove(c, d); d.lastX = c.x; d.lastY = c.y; });
+const endDrag = () => { if (!st.drag) return; st.lastInput = performance.now(); onDragEnd(st.drag); st.drag = null; };
 cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
 
 /* ---------- 단계별 조작 규칙 ---------- */
@@ -432,7 +474,7 @@ function onDragMove(c, d) {
   if (k === 'shape') {
     if (!speedCheck()) return;
     if (!frictionCheck(dt, 0.8)) return;
-    const y0 = clamp(c.y, 0.02, st.H), push = (Math.sign(c.x || 1) * (d.dx || 0)), sig = st.H * 0.13;
+    const y0 = clamp(c.y, 0.02, st.H), push = (st.shapeMode === 'in' ? -1 : 1) * Math.hypot(d.dx || 0, (d.dy || 0) * 0.5) * 0.6, sig = st.H * 0.13;
     if (Math.abs(push) < 1e-4) return;
     for (let i = 0; i < N; i++) {
       const y = st.H * i / (N - 1), w = Math.exp(-((y - y0) ** 2) / (2 * sig * sig));
@@ -566,7 +608,7 @@ function finishPiece() {
   showResult(`<h2>${VESSELS[st.vessel].name} 완성!</h2><div class="tw-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div><p>${CLAYS[st.clay].name} · ${st.mode === 'easy' ? '쉬움' : '실전'} 모드 · ${Math.round(total * 100)}점</p>
     <div class="tw-scores">${Object.keys(sc).map(k => `<div><span>${k}</span><b>${Math.round(sc[k] * 100)}</b></div>`).join('')}</div>
     <div class="tw-say">🧑‍🏫 선생님: ${say}</div>
-    <button class="pri" data-a="save">작업대에 올려두기</button> <button data-a="redo">하나 더 빚기</button>`);
+    <button class="pri" data-a="carry">🖼 전시관에 들고 가기</button> <button data-a="save">작업대에 올려두기</button> <button data-a="redo">하나 더 빚기</button>`);
 }
 function showResult(html) { const v = $('[data-v="result"]'); v.querySelector('.tw-card').innerHTML = html; v.hidden = false; v.querySelectorAll('button').forEach(b => b.onclick = () => act(b.dataset.a)); }
 
@@ -584,9 +626,14 @@ function act(a) {
   if (a === 'setup') { $('[data-v="result"]').hidden = true; reset(); $('[data-v="setup"]').hidden = false; }
   if (a === 'start') { $('[data-v="setup"]').hidden = true; reset(); }
   if (a === 'save') {
-    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift(st.lastPiece); localStorage.setItem('heukmaru-pieces', JSON.stringify(list.slice(0, 24))); } catch {}
+    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift({ ...st.lastPiece, place: 'table' }); localStorage.setItem('heukmaru-pieces', JSON.stringify(list.slice(0, 40))); } catch {}
     window.dispatchEvent(new CustomEvent('heukmaru-pieces'));
     $('[data-v="result"]').hidden = true; reset(); warn('공방 긴 작업대에 올려뒀어요 ✓', 1600);
+  }
+  if (a === 'carry') {
+    const pc = { ...st.lastPiece, place: 'carry' };
+    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift(pc); localStorage.setItem('heukmaru-pieces', JSON.stringify(list.slice(0, 40))); } catch {}
+    $('[data-v="result"]').hidden = true; reset(); const cb = st.onCarry; close(); if (cb) cb(pc); return;
   }
   if (a === 'leave') close();
 }
@@ -617,75 +664,203 @@ function reset() {
   rebuildLumpFromVolume(); buildClay(); wireLine.position.x = -1.4; enterStep(0);
 }
 function open(opts = {}) {
-  st.active = true; host.hidden = false; st.onExit = opts.onExit; st.say = opts.say;
+  st.active = true; host.hidden = false; st.onExit = opts.onExit; st.say = opts.say; st.onCarry = opts.onCarry;
   const skin = opts.skin || '#f2b9a0';
   if (!handL) { handL = makeHand(skin); handR = makeHand(skin); }
-  [handL, handR].forEach(h => h.traverse(m => { if (m.isMesh && m !== h.userData.arm) m.material.color.set(skin); }));
+  [handL, handR].forEach(h => h.userData.skin.color.set(skin));
   resize(); reset(); $('[data-v="setup"]').hidden = false; $('[data-v="result"]').hidden = true;
   if (!looping) { looping = true; requestAnimationFrame(loop); }
 }
 function close() { st.active = false; host.hidden = true; if (st.onExit) st.onExit(); }
 function say(t) { if (st.say) st.say(t); }
 
-/* ---------- 손 위치 (단계·드래그에 따라) ---------- */
-const tmp = V();
+/* ---------- 손 위치 (단계·드래그에 따라) ----------
+   흙 오른쪽 옆선(화면에서 보이는 단면)에 손가락 끝이 닿게 놓는다. 손가락 두께(FR)만큼 띄워 흙을 뚫지 않게.
+   드래그 중이면 누르는 높이를 따라오고, 쉬는 동안엔 반투명 손이 시범 동작을 보여준다. */
+const DEMO_MS = 1800;
+const PHI = 20 * Math.PI / 180, CP = Math.cos(PHI), SP = Math.sin(PHI);   // 손이 닿는 자리: 오른쪽 옆선에서 카메라 쪽으로 20°
+const bandRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.011, 6, 72), new THREE.MeshBasicMaterial({ color: '#ffd27a', transparent: true, opacity: 0.9, depthTest: true }));
+bandRing.rotation.x = Math.PI / 2; bandRing.visible = false; S.add(bandRing);
+function showBand(y, r) { bandRing.visible = true; bandRing.position.set(clayGroup.position.x, y, clayGroup.position.z); bandRing.scale.set(r + 0.006, r + 0.006, 1); }
+function demoPhase(now) {
+  if (st.drag || st.failed) return -1;
+  if (now - st.lastInput > 9000) { st.demoT0 = now; st.lastInput = now; }
+  const t = now - st.demoT0; return t < DEMO_MS * 2 ? (t % DEMO_MS) / DEMO_MS : -1;
+}
+const ease = u => u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+function maxRAround(y, span = 0.07) { let m = 0; for (let k = -3; k <= 3; k++) m = Math.max(m, st.opened ? rAt(clamp(y + span * k / 3, 0, st.H)) : lumpRadius(clamp(y + span * k / 3, 0, st.lumpH))); return m; }
 function placeHands(now) {
-  const k = STEPS[st.step].key, d = st.drag, showTools = k === 'finish' || k === 'wire';
+  const k = STEPS[st.step].key, d = st.drag, ox = clayGroup.position.x, oz = clayGroup.position.z;
   Object.values(tools).forEach(t => t.visible = false);
-  const n = V(cam.position.x, 0, cam.position.z).normalize(), right = V(n.z, 0, -n.x);
-  const at = (h, x, y, z, rx = 0, rz = 0) => { h.position.copy(right.clone().multiplyScalar(x)).add(V(0, y, 0)).add(n.clone().multiplyScalar(z)); h.rotation.set(rx, Math.atan2(n.x, n.z), rz); h.visible = true; };
-  const yH = d ? clamp(d.y, 0.05, (st.opened ? st.H : st.lumpH)) : (st.opened ? st.H * 0.5 : st.lumpH * 0.55);
-  const touching = !!d;
-  if (k === 'attach') { const off = V(st.attachX, 0, st.attachZ); handL.visible = handR.visible = true; handL.position.copy(off).add(V(-0.55, 0.35, 0.2)); handR.position.copy(off).add(V(0.55, 0.35, 0.2)); handL.rotation.set(0, 0.2, 0.9); handR.rotation.set(0, -0.2, -0.9); return; }
-  if (k === 'center' || k === 'open' && !st.opened) {
-    const h = st.lumpH, R0 = lumpRadius(h * 0.5);
-    if (k === 'open') { at(handL, -0.09, h - st.depth + 0.22, 0.1, 0.2, 0.25); at(handR, 0.09, h - st.depth + 0.22, 0.1, 0.2, -0.25); return; }
-    const y = clamp(yH, 0.15, h * 0.85), rr = lumpRadius(y) + 0.14;
-    at(handL, -rr, y, 0.12, 0, 0.35); at(handR, rr, y + (st.coneDir === 1 && !touching ? 0.25 : 0), 0.12, 0, -0.35);
-    if (touching && d.dy < 0) at(handR, 0.18, h + 0.2, 0.1, 0.6, -1.2);
+  handL.visible = handR.visible = false; bandRing.visible = false;
+  const ph = demoPhase(now), demo = ph >= 0, A = demo ? 0.5 : 1;
+  const P = (x, y, z = 0) => V(x + ox, y, z + oz);
+  const v = VESSELS[st.vessel];
+  st.demoOn = demo;
+  if (k === 'attach') {
+    if (st.attached) return;
+    const cy = 0.35 + 0.28, r = st.lumpR * 0.9;
+    poseHand(handL, V(st.attachX - r - FR, cy, st.attachZ), 8, 0, 1); poseHand(handR, V(st.attachX + r + FR, cy, st.attachZ), 172, 0, 1); return;
+  }
+  if (k === 'center') {
+    const h = st.lumpH;
+    let down, y;
+    if (d) { down = st.coneDir === 1 && d.dy <= 0; y = clamp(d.y, 0.08, h * 0.9); }
+    else if (demo) { down = st.coneDir === 1 ? true : ph > 0.55; y = down ? h : lerp(0.1, h * 0.85, ease(clamp(ph / 0.55, 0, 1))); }
+    else { down = st.coneDir === 1; y = h * 0.45; }
+    if (!down) { const r = maxRAround(y) + FR; poseHand(handL, P(-r * CP, y, r * SP), 12, 0, A, PHI); poseHand(handR, P(r * CP, y, r * SP), 168, 0, A, -PHI); if (d || demo) showBand(y, lumpRadius(y)); }
+    else { poseHand(handR, P(0.06, h + FR + (demo ? (1 - ease(clamp((ph - 0.55) / 0.45, 0, 1))) * 0.25 : 0)), -78, 1, A); const yl = h * 0.45; poseHand(handL, P(-(maxRAround(yl) + FR), yl), 10, 0, A); }
     return;
   }
-  if (!st.opened) return;
-  const y = clamp(yH, 0.05, st.H), ro = rAt(y), ri = ro - tAt(y);
-  if (k === 'widen') { const x = d ? clamp(Math.abs(d.x), 0.1, st.floorR + 0.1) : st.floorR * 0.6; at(handL, -ro - 0.16, st.H * 0.5, 0.15, 0, 0.3); at(handR, x * 0.7, st.floorT + 0.18, 0.05, 0.4, -0.2); return; }
-  if (k === 'pull' || k === 'shape') { at(handL, -(ri - 0.12), y + 0.12, -0.05, 0, 0.15); at(handR, ro + 0.15, y, 0.1, 0, -0.35); handL.position.y = y + 0.1; return; }
-  if (k === 'finish') {
-    handL.visible = true; at(handL, -ro - 0.2, st.H * 0.45, 0.2, 0, 0.35); handR.visible = false;
-    const tl = tools[st.tool || 'sponge'];
-    if (st.tool === 'sponge') { tl.position.set(0, st.floorT + 0.12, 0.05); }
-    else if (st.tool === 'needle' || st.tool === 'chamois') { tl.position.copy(right.clone().multiplyScalar(d ? d.x : rAt(st.H) * 0.9)).add(V(0, st.H + 0.04, 0.0)).add(n.clone().multiplyScalar(0.25)); tl.rotation.set(0, 0, st.tool === 'needle' ? 1.3 : 0); }
-    else if (st.tool === 'rib') { const yy = d ? clamp(d.y, 0.05, st.H * 0.5) : 0.15; tl.position.copy(right.clone().multiplyScalar(rAt(yy) + 0.12)).add(V(0, yy, 0)).add(n.clone().multiplyScalar(0.1)); tl.rotation.set(0, Math.atan2(n.x, n.z) + Math.PI / 2, 0); }
-    tl.visible = true; return;
+  if (k === 'open' && !st.opened) {
+    const h = st.lumpH, yl = h * 0.45;
+    const tipY = d ? h - st.depth + FR : demo ? h + 0.3 - 0.3 * ease(Math.min(1, ph * 1.6)) + FR : h + 0.18;
+    poseHand(handR, P(0.0, tipY), -84, 1, A); poseHand(handL, P(-(maxRAround(yl) + FR), yl), 10, 0, A); return;
   }
-  if (k === 'wire') { handL.visible = handR.visible = false; const x = wireLine.position.x; tools.wireL.visible = tools.wireR.visible = true; tools.wireL.position.set(x - 1.5, 0.05, 0.25); tools.wireR.position.set(x + 1.5, 0.05, 0.25); }
+  if (!st.opened) return;
+  if (k === 'widen') {
+    const x = d ? clamp(Math.abs(d.x), 0.04, st.floorR + 0.02) : demo ? lerp(0.04, v.floorR, ease(ph)) : st.floorR * 0.7;
+    poseHand(handR, P(x, st.floorT + FR), -62, 1, A);
+    const yl = st.H * 0.45; poseHand(handL, P(-(maxRAround(yl) + FR), yl), 8, 0, A); return;
+  }
+  if (k === 'pull' || k === 'shape') {
+    let y;
+    if (d) y = clamp(d.y, 0.04, st.H - 0.02);
+    else if (demo) y = k === 'pull' ? lerp(0.04, st.H - 0.03, ease(clamp(ph / 0.8, 0, 1))) : st.H * 0.55 + Math.sin(ph * Math.PI * 4) * 0.04;
+    else y = k === 'pull' ? 0.06 : st.H * 0.55;
+    const ro = maxRAround(y), ri = rAt(y) - tAt(y);
+    const outA = k === 'shape' && st.shapeMode === 'out' && !demo ? 0.35 : A, inA = k === 'shape' && st.shapeMode === 'in' && !demo ? 0.35 : A;
+    const ro2 = ro + FR, ri2 = Math.max(0.03, ri - FR);
+    poseHand(handR, P(ro2 * CP, y, ro2 * SP), 186, 0, outA, -PHI);            // 바깥 손: 흙 쪽을 향해
+    poseHand(handL, P(ri2 * CP, y, ri2 * SP), -68, 1, inA, -PHI);             // 안쪽 손: 위에서 내려와 안쪽 벽에
+    if (d || demo) showBand(y, rAt(y));
+    return;
+  }
+  if (k === 'finish') {
+    const yl = st.H * 0.4; poseHand(handL, P(-(maxRAround(yl) + FR), yl), 8, 0, 1);
+    const tl = tools[st.tool || 'sponge'], rH = rAt(st.H), tH = tAt(st.H);
+    tl.rotation.set(0, 0, 0);
+    if (!st.tool || st.tool === 'sponge') tl.position.copy(P(0, st.floorT + 0.06 + (d ? 0 : 0.05)));
+    else if (st.tool === 'needle') { tl.position.copy(P(rH - tH * 0.5 + 0.06, st.H + 0.24)); tl.rotation.z = 0.25; }
+    else if (st.tool === 'chamois') { tl.position.copy(P(rH - tH * 0.5, st.H + tH * 0.3 + 0.012)); tl.rotation.z = 0; }
+    else if (st.tool === 'rib') { const yy = d ? clamp(d.y, 0.06, st.H * 0.45) : 0.14; tl.position.copy(P(maxRAround(yy, 0.08) + 0.125, yy)); }
+    tl.visible = true;
+    // 오른손이 도구를 쥔다 (손가락이 도구 쪽)
+    const tp = tl.position.clone(); poseHand(handR, V(tp.x + 0.1, tp.y + (st.tool === 'needle' ? 0.2 : 0.05), tp.z), 200, 0, 1);
+    return;
+  }
+  if (k === 'wire') { const x = wireLine.position.x; tools.wireL.visible = tools.wireR.visible = true; tools.wireL.position.set(x - 1.5, 0.05, 0.25); tools.wireR.position.set(x + 1.5, 0.05, 0.25); }
 }
 
-/* ---------- 목표 실루엣 가이드 (화면에 점선) ---------- */
-function drawGuide() {
-  gctx.clearRect(0, 0, guide.width, guide.height);
-  const k = STEPS[st.step].key;
-  if (!st.opened || !['pull', 'shape', 'finish'].includes(k)) return;
-  const v = VESSELS[st.vessel], n = V(cam.position.x, 0, cam.position.z).normalize(), right = V(n.z, 0, -n.x), dpr = guide.width / guide.clientWidth;
-  gctx.setLineDash([7 * dpr, 6 * dpr]); gctx.lineWidth = 2 * dpr; gctx.strokeStyle = 'rgba(255,240,215,0.75)';
-  for (const side of [-1, 1]) {
-    gctx.beginPath();
-    for (let i = 0; i <= 40; i++) {
-      const u = i / 40, p = right.clone().multiplyScalar(side * v.prof(u)).add(V(0, u * v.H, 0)).project(cam);
-      const x = (p.x + 1) / 2 * guide.width, y = (1 - p.y) / 2 * guide.height; i ? gctx.lineTo(x, y) : gctx.moveTo(x, y);
-    }
-    gctx.stroke();
+/* ---------- 화면 가이드: 목표 점선 · 동작 화살표 · 누르는 점 · 시간 링 ---------- */
+const proj = p => { const q = p.clone().project(cam); return [(q.x + 1) / 2 * guide.width, (1 - q.y) / 2 * guide.height]; };
+function arrow(pts, label, now, opts = {}) {
+  const dpr = guide.width / guide.clientWidth, sp = pts.map(proj);
+  gctx.save(); gctx.lineCap = 'round'; gctx.lineJoin = 'round';
+  gctx.strokeStyle = opts.color || 'rgba(255,214,120,.95)'; gctx.lineWidth = 4 * dpr; gctx.setLineDash([10 * dpr, 8 * dpr]); gctx.lineDashOffset = -(now / 30) * dpr;
+  gctx.shadowColor = '#0008'; gctx.shadowBlur = 6 * dpr;
+  gctx.beginPath(); sp.forEach(([x, y], i) => i ? gctx.lineTo(x, y) : gctx.moveTo(x, y)); gctx.stroke(); gctx.setLineDash([]);
+  const heads = opts.both ? [[sp.length - 1, sp.length - 2], [0, 1]] : [[sp.length - 1, sp.length - 2]];
+  gctx.fillStyle = gctx.strokeStyle;
+  for (const [a, b] of heads) { const [x1, y1] = sp[a], [x0, y0] = sp[b], ang = Math.atan2(y1 - y0, x1 - x0), L = 16 * dpr;
+    gctx.beginPath(); gctx.moveTo(x1 + Math.cos(ang) * 4 * dpr, y1 + Math.sin(ang) * 4 * dpr); gctx.lineTo(x1 - Math.cos(ang - 0.5) * L, y1 - Math.sin(ang - 0.5) * L); gctx.lineTo(x1 - Math.cos(ang + 0.5) * L, y1 - Math.sin(ang + 0.5) * L); gctx.closePath(); gctx.fill(); }
+  if (label) {
+    const [lx, ly] = sp[opts.labelAt ?? sp.length - 1]; gctx.shadowBlur = 0;
+    gctx.font = `700 ${13 * dpr}px system-ui, sans-serif`; const w = gctx.measureText(label).width + 18 * dpr, hh = 26 * dpr;
+    const bx = clamp(opts.left ? lx - w - 14 * dpr : lx + (opts.dx ?? 14) * dpr, 4, guide.width - w - 4), by = ly + (opts.dy ?? -13) * dpr;
+    gctx.fillStyle = '#2b2420e6'; gctx.beginPath(); gctx.roundRect(bx, by, w, hh, hh / 2); gctx.fill();
+    gctx.fillStyle = '#ffe2a6'; gctx.textBaseline = 'middle'; gctx.fillText(label, bx + 9 * dpr, by + hh / 2);
   }
-  gctx.setLineDash([]);
+  gctx.restore();
+}
+function drawGuide(now) {
+  gctx.clearRect(0, 0, guide.width, guide.height);
+  if (!st.active || st.failed || !$('[data-v="setup"]').hidden || !$('[data-v="result"]').hidden) return;
+  const k = STEPS[st.step].key, v = VESSELS[st.vessel], dpr = guide.width / guide.clientWidth, d = st.drag;
+  // 목표 점선
+  if (st.opened && ['pull', 'shape', 'finish'].includes(k)) {
+    gctx.setLineDash([7 * dpr, 6 * dpr]); gctx.lineWidth = 2 * dpr; gctx.strokeStyle = 'rgba(255,240,215,0.75)';
+    for (const side of [-1, 1]) { gctx.beginPath(); for (let i = 0; i <= 40; i++) { const u = i / 40, [x, y] = proj(V(side * v.prof(u), u * v.H, 0)); i ? gctx.lineTo(x, y) : gctx.moveTo(x, y); } gctx.stroke(); }
+    gctx.setLineDash([]);
+  }
+  // 동작 화살표 (누르고 있지 않을 때)
+  if (!d) {
+    const h = st.lumpH, H = st.H;
+    if (k === 'attach' && !st.attached) arrow([V(st.attachX, 0.62, st.attachZ), V(0, 0.32, 0)], '가운데로 끌어다 놓기', now, { dy: 10 });
+    if (k === 'attach' && st.attached) arrow([V(0, h + 0.5, 0), V(0, h + 0.15, 0)], '잘 붙었어요! 다음 단계', now, {});
+    if (k === 'center') {
+      const x = lumpRadius(h * 0.4) + 0.32;
+      if (st.coneDir === 1) arrow([V(0.05, h + 0.55, 0), V(0.05, h + 0.08, 0)], '② 위에서 꾹 눌러 내리기', now, { labelAt: 0, dy: -30 });
+      else arrow([V(x, 0.1, 0), V(x, h + 0.2, 0)], '① 양손으로 감싸 위로 끌어올리기', now, { left: true, dy: -40 });
+    }
+    if (k === 'open') arrow([V(0, h + 0.55, 0), V(0, h + 0.05, 0)], '가운데를 꾹 누르고 기다리기', now, { labelAt: 0, dy: -30 });
+    if (k === 'widen') arrow([V(0.02, st.floorT + 0.04, 0.0), V(v.floorR + 0.04, st.floorT + 0.04, 0)], '바닥을 바깥으로 쓸기', now, { dy: -42 });
+    if (k === 'pull') { const x = maxRAround(H * 0.5, H * 0.5) + 0.26; arrow([V(x, 0.03, 0), V(x, H + 0.15, 0)], st.pulls >= v.pulls ? '충분해요 → 다음 단계' : '아래에서 위로 1~2초', now, { left: true, dy: -30 }); }
+    if (k === 'shape') { const y = H * 0.55, x = rAt(y) + 0.12; arrow(st.shapeMode === 'in' ? [V(x + 0.28, y, 0), V(x, y, 0)] : [V(x, y, 0), V(x + 0.28, y, 0)], st.shapeMode === 'in' ? '원하는 높이를 문질러 조이기' : '원하는 높이를 문질러 부풀리기', now, { labelAt: 0, dx: -60, dy: -44 }); }
+    if (k === 'finish') {
+      const t = st.tool || 'sponge', rH = rAt(H);
+      if (t === 'sponge') arrow([V(0, st.floorT + 0.45, 0), V(0, st.floorT + 0.12, 0)], '안쪽 바닥을 톡 누르기', now, { labelAt: 0, dy: -30 });
+      if (t === 'needle' || t === 'chamois') arrow([V(-rH, H + 0.12, 0), V(rH, H + 0.12, 0)], t === 'needle' ? '윗단을 따라 옆으로 긋기' : '입술을 따라 옆으로 문지르기', now, { labelAt: 0, dx: -40, dy: -40 });
+      if (t === 'rib') { const x = maxRAround(H * 0.2, H * 0.2) + 0.3; arrow([V(x, 0.04, 0), V(x, H * 0.45, 0)], '아랫부분을 위로 쓸기', now, { left: true, dy: -30 }); }
+    }
+    if (k === 'wire') arrow([V(-1.0, 0.03, 0.2), V(1.0, 0.03, 0.2)], '페달 멈추고 바닥을 따라 쭉 긋기', now, { labelAt: 0, dx: 0, dy: 16 });
+  }
+  // 누르는 점 + 시간 링
+  if (d && d.sx !== undefined) {
+    const x = d.sx * dpr, y = d.sy * dpr;
+    gctx.strokeStyle = '#fff6e4'; gctx.lineWidth = 2.5 * dpr; gctx.beginPath(); gctx.arc(x, y, 13 * dpr, 0, 7); gctx.stroke();
+    gctx.fillStyle = '#fff6e455'; gctx.beginPath(); gctx.arc(x, y, 6 * dpr, 0, 7); gctx.fill();
+    if (k === 'pull' && d.pullStartOK) {
+      const dur = (now - d.t0) / 1000, col = dur < 0.9 ? '#e9c35a' : dur <= 2.6 ? '#8fd18a' : dur <= 4 ? '#e9c35a' : '#e2683f';
+      gctx.strokeStyle = '#0006'; gctx.lineWidth = 6 * dpr; gctx.beginPath(); gctx.arc(x, y, 24 * dpr, 0, 7); gctx.stroke();
+      gctx.strokeStyle = col; gctx.lineWidth = 5 * dpr; gctx.beginPath(); gctx.arc(x, y, 24 * dpr, -Math.PI / 2, -Math.PI / 2 + Math.min(1, dur / 2) * Math.PI * 2); gctx.stroke();
+      gctx.font = `700 ${12 * dpr}px system-ui, sans-serif`; gctx.fillStyle = col; gctx.textAlign = 'center'; gctx.fillText(dur.toFixed(1) + '초', x, y - 34 * dpr); gctx.textAlign = 'left';
+    }
+  }
+}
+
+/* ---------- 단면 미니 창: 벽 두께와 손가락 위치를 옆에서 자른 모습으로 ---------- */
+const secCv = $('.tw-sec-view canvas'), sctx = secCv.getContext('2d');
+function drawSection() {
+  const k = STEPS[st.step].key, box = $('.tw-sec-view');
+  box.hidden = k === 'attach' || k === 'wire'; if (box.hidden) return;
+  const W = secCv.width, Hc = secCv.height, sc = Math.min((W - 24) / 1.05, (Hc - 22) / 1.6), x0 = 12, y0 = Hc - 12;
+  const X = r => x0 + r * sc, Y = y => y0 - y * sc;
+  sctx.clearRect(0, 0, W, Hc);
+  sctx.strokeStyle = '#ffffff30'; sctx.setLineDash([3, 3]); sctx.beginPath(); sctx.moveTo(x0, 4); sctx.lineTo(x0, y0); sctx.stroke(); sctx.setLineDash([]);
+  sctx.fillStyle = '#5f5e5b'; sctx.fillRect(x0 - 4, y0, W, 5);
+  sctx.fillStyle = clayMat.color.getStyle();
+  sctx.beginPath(); sctx.moveTo(X(0), Y(0));
+  if (!st.opened) {
+    for (let i = 0; i <= 26; i++) { const y = st.lumpH * i / 26; sctx.lineTo(X(lumpRadius(y)), Y(y)); }
+    if (st.depth > 0.01) { const hr = 0.09 + st.floorR * 0.6; sctx.lineTo(X(hr), Y(st.lumpH)); sctx.lineTo(X(hr * 0.8), Y(st.lumpH - st.depth)); sctx.lineTo(X(0), Y(st.lumpH - st.depth)); }
+    else sctx.lineTo(X(0), Y(st.lumpH));
+  } else {
+    for (let i = 0; i < N; i++) sctx.lineTo(X(st.r[i]), Y(st.H * i / (N - 1)));
+    for (let i = N - 1; i >= 0; i--) { const y = st.H * i / (N - 1); if (y < st.floorT) break; sctx.lineTo(X(Math.max(0.02, st.r[i] - st.t[i])), Y(y)); }
+    sctx.lineTo(X(0), Y(st.floorT));
+  }
+  sctx.closePath(); sctx.fill();
+  if (st.opened && ['pull', 'shape', 'finish'].includes(k)) {
+    const v = VESSELS[st.vessel]; sctx.strokeStyle = '#ffe2a6aa'; sctx.setLineDash([4, 3]); sctx.lineWidth = 1.5; sctx.beginPath();
+    for (let i = 0; i <= 30; i++) { const u = i / 30; i ? sctx.lineTo(X(v.prof(u)), Y(u * v.H)) : sctx.moveTo(X(v.prof(u)), Y(u * v.H)); } sctx.stroke(); sctx.setLineDash([]);
+  }
+  // 손가락 (분홍 점) — 손 모델과 같은 자리
+  sctx.fillStyle = '#f2b9a0';
+  const dot = (r, y) => { sctx.beginPath(); sctx.arc(X(r), Y(y), 4.5, 0, 7); sctx.fill(); sctx.strokeStyle = '#0005'; sctx.lineWidth = 1; sctx.stroke(); };
+  const rad = p => Math.hypot(p.x - clayGroup.position.x, p.z - clayGroup.position.z);
+  if (handR.visible && k !== 'finish') dot(rad(handR.position), handR.position.y);
+  if (handL.visible && (k === 'pull' || k === 'shape')) dot(rad(handL.position), handL.position.y);
 }
 
 /* ---------- 루프 ---------- */
-let looping = false, last = performance.now(), splashT = 0;
-function resize() { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; R.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 0.8 ? 46 : 34; cam.updateProjectionMatrix(); guide.width = w * Math.min(devicePixelRatio, 2); guide.height = h * Math.min(devicePixelRatio, 2); renderPedal(); }
+let looping = false, last = performance.now(), splashT = 0, camK = 1;
+function resize() { const w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight; R.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 0.8 ? 46 : 34; camK = w / h < 0.8 ? 1.45 : 1; cam.updateProjectionMatrix(); guide.width = w * Math.min(devicePixelRatio, 2); guide.height = h * Math.min(devicePixelRatio, 2); renderPedal(); }
 addEventListener('resize', () => { if (st.active) resize(); });
 addEventListener('keydown', e => {
   if (!st.active) return;
-  if (e.key === 'ArrowUp' && st.mode !== 'easy') { st.speed = clamp(st.speed + 0.1, 0, 1); e.preventDefault(); }
-  if (e.key === 'ArrowDown' && st.mode !== 'easy') { st.speed = clamp(st.speed - 0.1, 0, 1); e.preventDefault(); }
+  if (e.key === 'ArrowUp' && st.mode !== 'easy') { st.autoPedal = false; st.speed = clamp(st.speed + 0.1, 0, 1); e.preventDefault(); }
+  if (e.key === 'ArrowDown' && st.mode !== 'easy') { st.autoPedal = false; st.speed = clamp(st.speed - 0.1, 0, 1); e.preventDefault(); }
   if (e.key === ' ') { act('water'); e.preventDefault(); }
   if (e.key === 'Enter') next();
 }, true);
@@ -715,13 +890,16 @@ function loop(now) {
   slip.material.opacity = clamp(0.15 + st.soak * 0.5 + st.step * 0.05, 0, 0.6) * (st.step > 0 ? 1 : 0);
   if (splashT > 0) splashT -= dt;
   st.soak = Math.max(0, st.soak - dt * 0.012);
-  if (st.mode === 'easy') st.speed += ((STEPS[st.step].speed[0] + STEPS[st.step].speed[1]) / 2 - st.speed) * Math.min(1, dt * 3);
+  if (st.mode === 'easy' || st.autoPedal) { st.speed += (st.speedTarget - st.speed) * Math.min(1, dt * 3); if (Math.abs(st.speedTarget - st.speed) < 0.01) st.autoPedal = false; }
+  else if (st.mode === 'real' && st.drag && !pedalDrag && st.step > 0 && st.step < 7) st.speed = clamp(st.speed + st.drift * dt, 0, 1);   // 실전: 누르는 동안 속도가 조금씩 흔들림
+  pedal.classList.toggle('drift', st.mode === 'real' && !speedOK());
   placeHands(now);
   // 게이지
   gauge('water', st.wet, null, [0.3, 0.85], st.wet < 0.18 ? '말랐어요' : st.wet > 0.85 ? (st.soak > 0.3 ? '흥건해요' : '촉촉') : '좋아요');
   gauge('wobble', st.wobble, null, [0, 0.14], Math.round(st.wobble * 100) + '%');
   const eg = host.querySelector('[data-g="extra"]');
-  if (k === 'open') { eg.hidden = false; gauge('extra', clamp(st.floorT / 0.6, 0, 1), '바닥 두께', [0.09 / 0.6, 0.2 / 0.6], (st.floorT * 10).toFixed(1) + 'cm'); }
+  if (k === 'center') { eg.hidden = false; const need = st.mode === 'easy' ? 1 : 2; gauge('extra', st.cone, st.coneDir === 1 ? '코닝 ↓ 눌러요' : '코닝 ↑ 올려요', [0.85, 1], '●'.repeat(Math.min(st.coneCycles, need)) + '○'.repeat(Math.max(0, need - st.coneCycles))); }
+  else if (k === 'open') { eg.hidden = false; gauge('extra', clamp(st.floorT / 0.6, 0, 1), '바닥 두께', [0.09 / 0.6, 0.2 / 0.6], (st.floorT * 10).toFixed(1) + 'cm'); }
   else if (k === 'widen') { eg.hidden = false; const v = VESSELS[st.vessel]; gauge('extra', clamp(st.floorR / (v.floorR * 1.3), 0, 1), '바닥 넓이', [0.88 / 1.3, 1], (st.floorR * 20).toFixed(1) + 'cm'); }
   else if (k === 'pull') { eg.hidden = false; const v = VESSELS[st.vessel]; gauge('extra', clamp(st.H / (v.H * 1.3), 0, 1), '높이', [0.82 / 1.3, 1.12 / 1.3], (st.H * 10).toFixed(1) + 'cm'); }
   else if (k === 'shape') { eg.hidden = false; gauge('extra', st.shapeScore, '모양 일치', [0.55, 1], Math.round(st.shapeScore * 100) + '%'); }
@@ -731,11 +909,11 @@ function loop(now) {
   if (k !== 'open') updateNext();
   // 카메라: 높이에 따라 살짝 위로
   const topY = st.opened ? st.H : st.lumpH;
-  cam.position.lerp(V(CAM_POS.x, CAM_POS.y + topY * 0.25, CAM_POS.z + topY * 0.15), 0.08);
+  cam.position.lerp(V(CAM_POS.x, (CAM_POS.y + topY * 0.25) * camK, (CAM_POS.z + topY * 0.15) * camK), 0.08);
   cam.lookAt(CAM_LOOK.x, CAM_LOOK.y + topY * 0.18, CAM_LOOK.z);
-  R.render(S, cam); drawGuide();
+  R.render(S, cam); drawGuide(now); drawSection();
   requestAnimationFrame(loop);
 }
 
-window.HeukThrow = { open, close, get active() { return st.active; }, _st: st, _act: act, _VESSELS: VESSELS, _cam: cam };
+window.HeukThrow = { open, close, get active() { return st.active; }, _st: st, _act: act, _VESSELS: VESSELS, _cam: cam, _frontR: () => frontR() };
 })();
