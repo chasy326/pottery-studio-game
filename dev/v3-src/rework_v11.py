@@ -17,7 +17,7 @@ extra=r'''<style id="soso-v11-style">
 /* selected vessel: keep the card light, mark it with an outline */
 .vessel-card.selected.soso-candy,.vessel-card.selected{--face-top:#fffaf0!important;--face-mid:#fff1dc!important;--edge:#e97c31!important;--outline:#e97c31!important;background:#fff4e4!important;box-shadow:0 0 0 3px #e97c31 inset,0 4px 0 #c9662a!important}
 .vessel-card.selected strong,.vessel-card.selected small{color:#5b3a1f!important;text-shadow:none!important}
-#makeMode.soso-sideview{background:radial-gradient(120% 70% at 50% 38%,#fbf1de 0%,#efdcbc 55%,#d3ad7f 100%)!important}
+#makeMode.soso-sideview{background-size:175% 175%!important;background-position:46% 4%!important}
 #makeMode.soso-sideview .focus-stage{visibility:hidden!important}
 #sosoHeightHelp,#sosoCutHelp{position:absolute;z-index:16;pointer-events:none;display:none}
 #sosoHeightHelp.show,#sosoCutHelp.show{display:block}
@@ -44,17 +44,21 @@ extra=r'''<style id="soso-v11-style">
 function pg(){try{return potGroup3}catch(e){return null}}
 function trimOn(){return window.__sosoTrim&&__sosoTrim.active;}
 /* ---- 옆면 시점 = 가까이서 보는 시점 (물레 3D, 단계별 각도) ---- */
-var camT=null,camP=null;
-function sideCam(snap){if(!window.cs3||cs3.view!=='side'||trimOn()||cs3.isTrim)return;try{var P=potGroup3.position,k=potGroup3.scale.x,R=Math.max(.2,Math.max.apply(null,radiusProfile))*k,h=Math.max(.2,heightScale)*k,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
-  var ELV=THREE.MathUtils.degToRad(cs3.step===2&&!cs3.freeMode?38:16),D=Math.max((R*2*2.5)/(2*tanH*aspect),(h*2.3)/(2*tanH)),tgt=new THREE.Vector3(P.x,P.y+h*.5,P.z),pos=new THREE.Vector3(tgt.x,tgt.y+D*Math.sin(ELV),tgt.z+D*Math.cos(ELV));
+var camT=null,camP=null,camFix=null;
+/* distance is decided once when the side view starts (room for the pot to grow), so the view never drifts back */
+function sideCam(snap){if(!window.cs3||cs3.view!=='side'||trimOn()||cs3.isTrim)return;try{var P=potGroup3.position,k=potGroup3.scale.x,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
+  if(!camFix){var rNow=Math.max.apply(null,radiusProfile),hNow=heightScale,T=null;try{if(CSPECS[vessel])T=cSpecState(vessel);}catch(e){}
+    var R=Math.max(.2,rNow*1.45);try{R=Math.min(R,CCFG.capR*1.05);}catch(e){}R*=k;var h=Math.max(.2,hNow)*1.15*k;
+    var ELV=THREE.MathUtils.degToRad(16),D=Math.max((R*2*1.7)/(2*tanH*aspect),(h*1.9)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.42};}
+  var tgt=new THREE.Vector3(P.x,P.y+camFix.ty,P.z),pos=new THREE.Vector3(tgt.x,tgt.y+camFix.D*Math.sin(camFix.ELV),tgt.z+camFix.D*Math.cos(camFix.ELV));
   if(snap||!camT){camT=tgt.clone();camP=pos.clone();}else{camT.lerp(tgt,.08);camP.lerp(pos,.08);}
   try{wheelGroup3.visible=true;}catch(e){}camera3.position.copy(camP);camera3.up.set(0,1,0);camera3.lookAt(camT);camera3.zoom=1;camera3.setViewOffset(W,H,0,Math.round(H*.07),W,H);camera3.updateProjectionMatrix();camera3.updateMatrixWorld(true);}catch(e){}}
 function clearOff(){try{if(camera3.view&&camera3.view.enabled&&!trimOn()){camera3.clearViewOffset();camera3.updateProjectionMatrix();}}catch(e){}}
-var _ang=angle;angle=function(){if(cs3.view==='side')clearOff();var r=_ang.apply(this,arguments);if(cs3.view==='side')sideCam(true);else camT=null;return r;};
+var _ang=angle;angle=function(){if(cs3.view!=='side')camFix=null;if(cs3.view==='side')clearOff();var r=_ang.apply(this,arguments);if(cs3.view==='side')sideCam(true);else camT=null;return r;};
 var _rig=craftApplyRig3;craftApplyRig3=function(){if(window.cs3&&cs3.view==='side')clearOff();var r=_rig.apply(this,arguments);if(window.cs3&&cs3.view==='side')sideCam(true);return r;};
 /* auto: opening / pulling / free shaping → close side view, once per stage */
 var autoKey='';
-function stageKey(){return cs3.freeMode?'free':(cs3.step===2||cs3.step===3)?'s'+cs3.step:'';}
+function stageKey(){return cs3.freeMode&&!cs3.cut?'free':'';}
 /* ---- helpers on screen ---- */
 var hh=null,ch=null;
 function ensure(){var m=document.getElementById('makeMode');if(!m)return;if(!hh){hh=document.createElement('div');hh.id='sosoHeightHelp';hh.innerHTML='<svg class="arr" viewBox="0 0 36 92"><path d="M18 6v80" stroke="#e97c31" stroke-width="5" stroke-linecap="round" stroke-dasharray="7 7"/><path d="M6 18L18 5l12 13M6 74l12 13 12-13" fill="none" stroke="#e97c31" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>';m.appendChild(hh);}if(!ch){ch=document.createElement('div');ch.id='sosoCutHelp';ch.innerHTML='<div class="ln"></div><div class="fg"></div>';m.appendChild(ch);}}
@@ -63,9 +67,10 @@ document.addEventListener('pointerdown',function(e){try{if(!window.cs3)return;va
 var lastStep=0;
 function loop(){requestAnimationFrame(loop);try{var mode=document.getElementById('makeMode');if(!mode||!window.cs3)return;ensure();var show=mode.classList.contains('show')&&!trimOn()&&!cs3.isTrim;
   if(cs3.step!==lastStep){lastStep=cs3.step;cutTouched=false;}
-  if(!show){autoKey='';}
-  var k=show?stageKey():'';if(k&&k!==autoKey&&cs3.centered&&!cs3.cut&&!dragging&&cs3.activePointer==null){autoKey=k;if(cs3.view!=='side')angle('옆면');else sideCam(true);}
-  if(k==='')autoKey=autoKey&&show?autoKey:'';
+  var k=show?stageKey():'';
+  if(k==='free'&&autoKey!=='free'&&cs3.centered&&!dragging&&cs3.activePointer==null){autoKey='free';camFix=null;if(cs3.view!=='side')angle('옆면');else sideCam(true);}
+  if(k!=='free'&&autoKey==='free'){autoKey='';camFix=null;if(show&&cs3.view==='side'&&!dragging)angle('정면');}
+  if(!show){autoKey='';camFix=null;}
   var side=show&&cs3.view==='side';mode.classList.toggle('soso-sideview',side);if(side)sideCam(false);
   /* height helper */
   var hOn=show&&cs3.step===1&&cs3.centered&&cs3.heightMode&&!hTouched&&!dragging;hh.classList.toggle('show',hOn);
