@@ -795,7 +795,9 @@ function drawPlayer(now) {
 
 /* 물레 차는 선생님 (포스터 캐릭터) — 3번 물레 자리, 물레실에서 계속 빚는 중 */
 const teacher = new THREE.Group(); scene.add(teacher);
-const TW = WHEELS[2]; TW.g.visible = false; TW.stool.visible = false;
+// NPC(선생님·손님·단짝) 표시 끄기 — 요청으로 모두 뺐어요. 다시 넣으려면 true
+const SHOW_NPC = false;
+const TW = WHEELS[2]; if (SHOW_NPC) { TW.g.visible = false; TW.stool.visible = false; }
 teacher.position.set(TW.g.position.x, 0, TW.g.position.z - 0.1);
 const teacherActor = makeActor();
 
@@ -823,7 +825,7 @@ function npcRelocate(n, now) {          // 안 보일 때만: 다른 자리(가�
 }
 NPCS.forEach(n => { const all = ROOMS[n.room].spots.filter(sp => !NPCS.some(o => o !== n && o.spot === sp)), pref = all.filter(sp => sp.kind === n.likes), f = pref.length ? pref : all; n.spot = f[n.seed % f.length]; n.x = n.spot.x; n.z = n.spot.z; n.until = performance.now() + 8000 + n.seed * 3000; });
 const roomVisible = id => id === curRoom && !(window.HeukThrow && HeukThrow.active) && !fading;
-function peopleHere() { return NPCS.filter(n => n.room === curRoom).concat(partner.room === curRoom ? [partner] : []); }   // 지금 방에 보이는 손님·단짝
+function peopleHere() { if (!SHOW_NPC) return []; return NPCS.filter(n => n.room === curRoom).concat(partner.room === curRoom ? [partner] : []); }   // 지금 방에 보이는 손님·단짝
 // 보는 물건이 화면 오른쪽에 있으면 오른쪽을 보게 뒤집기
 function lookFlip(n) { if (!n.spot || !n.face) return false; const ox = Math.sin(n.spot.face), oz = Math.cos(n.spot.face), sx = ox * CAM_RIGHT.x + oz * CAM_RIGHT.z; return sx > 0.05; }
 
@@ -867,6 +869,7 @@ function partnerStep(dt, now) {
 }
 
 function drawNPCs(now, dt) {
+  if (!SHOW_NPC) { teacherActor.mesh.visible = teacherActor.blob.visible = false; for (const n of NPCS) n.actor.mesh.visible = n.actor.blob.visible = false; partner.actor.mesh.visible = partner.actor.blob.visible = false; return; }
   const inStudio = curRoom === 'studio';
   teacherActor.mesh.visible = teacherActor.blob.visible = inStudio;
   if (inStudio) { showFrame(teacherActor, 'N_teacher', teacher.position.x, teacher.position.z, false); teacherActor.mesh.rotation.z = 0; teacherActor.blob.scale.set(1.8, 0.9, 1); }
@@ -995,7 +998,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   }
   if (curRoom !== 'studio') { const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { sitTarget = null; walkTo(pt.x, pt.z); showMarker(pt); } return; }
   // 물레를 누르면 앉으러 감
-  if (ray.intersectObjects([WHEELS[2].g, WHEELS[2].stool], true).length || (() => { const p = V(); ray.ray.intersectPlane(ground, p); return p && Math.hypot(p.x - WHEELS[2].g.position.x, p.z - WHEELS[2].g.position.z) < 0.55; })()) { setHint('선생님 자리예요. 1·2번 물레를 써요'); return; }
+  if (SHOW_NPC && ray.intersectObjects([WHEELS[2].g, WHEELS[2].stool], true).length || (() => { const p = V(); ray.ray.intersectPlane(ground, p); return p && Math.hypot(p.x - WHEELS[2].g.position.x, p.z - WHEELS[2].g.position.z) < 0.55; })()) { setHint('선생님 자리예요. 1·2번 물레를 써요'); return; }
   const hits = ray.intersectObjects(FREE_WHEELS().map(w => w.g), true);
   if (hits.length) { const w = WHEELS.find(w => hits[0].object.parent === w.g || hits[0].object.parent?.parent === w.g); if (w) return trySit(w); }
   const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { sitTarget = null; walkTo(pt.x, pt.z); showMarker(pt); }
@@ -1008,7 +1011,7 @@ function showMarker(p) { marker.position.set(p.x, 0.012, p.z); marker.visible = 
 
 /* ---------- 앉기 / 일어서기 ---------- */
 const sitBtn = $('#sitBtn'), hint = $('#hint');
-const FREE_WHEELS = () => WHEELS.filter((w, i) => i !== 2);
+const FREE_WHEELS = () => WHEELS.filter((w, i) => !SHOW_NPC || i !== 2);
 function nearestFreeWheel() {
   const free = FREE_WHEELS();
   return free.sort((a, b) => a.seat.distanceTo(player.position) - b.seat.distanceTo(player.position))[0];
@@ -1057,7 +1060,7 @@ let speaker = null, speakerH = 1.55, bubbleUntil = 0, nextBubble = 3000, tIdx = 
 function say(obj, text, h = 1.55, ms = 3200) { speaker = obj; speakerH = h; bubble.textContent = text; bubble.hidden = false; bubbleUntil = performance.now() + ms; nextBubble = performance.now() + ms + 2600; }
 function queueLine(n, text) { if (performance.now() > bubbleUntil) say(n.obj, text); }
 function updateBubble(now) {
-  if (now > nextBubble) {
+  if (now > nextBubble && SHOW_NPC) {
     const here = NPCS.filter(n => n.room === curRoom).concat(partner.room === curRoom && partner.spot ? [partner] : []);
     if (curRoom === 'studio' && Math.random() < 0.4) say(teacher, TEACHER_LINES[tIdx++ % TEACHER_LINES.length], 1.25);
     else if (here.length) { const n = here[Math.floor(Math.random() * here.length)]; say(n.obj, n.spot ? n.spot.lines[Math.floor(Math.random() * n.spot.lines.length)] : ['흙 묻었어요 ㅎㅎ', '여기 너무 좋다', '다음엔 뭐 만들지?'][Math.floor(Math.random() * 3)]); }
@@ -1125,7 +1128,7 @@ function startCarry(pc) {
   updateDock(); updateGalleryGlow();
   ROOMS.studio.doors.forEach(d => d.pulse = d.to === 'gallery');
   setHint('작품을 들었어요! 왼쪽 🖼 전시관 문으로 가요');
-  say(teacher, '전시관에 놓으면 다들 볼 수 있어요!', 1.25, 3600);
+  if (SHOW_NPC) say(teacher, '전시관에 놓으면 다들 볼 수 있어요!', 1.25, 3600);
 }
 function updateGalleryGlow() { PEDESTALS.forEach(p => p.glow.material.opacity = 0); }
 function renderGallery() {
@@ -1142,7 +1145,7 @@ function placeOn(i) {
     if (u < 1) requestAnimationFrame(anim); else {
       scene.remove(m); const list = loadPieces(), it = list.find(o => o.id === pc.id); if (it) { it.place = 'gallery'; it.slot = i; } savePieces(list);
       renderGallery(); renderMyPieces(); updateDock();
-      const n = NPCS.find(o => o.room === 'gallery' && o.spot); if (n) say(n.obj, ['와, 잘 어울려요!', '이거 직접 만든 거예요?', '색 너무 예쁘다'][Math.floor(Math.random() * 3)], 1.55, 3200);
+      const n = SHOW_NPC && NPCS.find(o => o.room === 'gallery' && o.spot); if (n) say(n.obj, ['와, 잘 어울려요!', '이거 직접 만든 거예요?', '색 너무 예쁘다'][Math.floor(Math.random() * 3)], 1.55, 3200);
       setHint(`${pc.clayName || ''} ${pc.name}을(를) 전시했어요 ✓`);
     } };
   requestAnimationFrame(anim);
