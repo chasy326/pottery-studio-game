@@ -625,9 +625,12 @@ function makeActor() {
   const blob = new THREE.Mesh(blobGeo, blobMat); blob.rotation.x = -Math.PI / 2; blob.scale.set(1, 0.6, 1); scene.add(blob);
   return { mesh, blob, cur: null };
 }
+// 걷기·들기·앉기 컷은 시트의 작은 그림이라 머리가 서 있는 컷보다 20% 정도 커요 → 머리 크기를 재서 맞춤
+const SCALE_FIX = { A_w1: 0.815, A_w2: 0.815, A_w3: 0.815, A_w4: 0.815, A_bowl1: 0.78, A_bowl2: 0.78, A_cheer: 0.8, A_wheel: 0.815,
+  B_w1: 0.906, B_w2: 0.906, B_w3: 0.906, B_f1: 0.93, B_bowl: 0.93, B_cheer: 0.91, B_x1: 0.906, B_x2: 0.906, B_x3: 0.906 };
 function showFrame(a, name, x, z, flip = false, lift = 0, squash = 1) {
   if (a.cur !== name) { a.mesh.material.map = tex(name); a.mesh.material.needsUpdate = true; a.cur = name; }
-  const [w, h] = SPR[name], k = kOf(name);
+  const [w, h] = SPR[name], k = kOf(name) * (SCALE_FIX[name] || 1);
   a.mesh.scale.set(w * k * (flip ? -1 : 1), h * k * ELEV_FIX * squash, 1);
   a.mesh.position.set(x, lift, z); a.blob.position.set(x, 0.008, z);
 }
@@ -647,19 +650,30 @@ player.userData = { pose: 'stand', walkAmt: 0, phase: 0 };
 const playerActor = makeActor();
 /* 캐릭터 그리기: 몸을 기울이거나 튕기지 않고, 그림 컷만 바꿔서 움직임을 만든다 (초당 8컷) */
 const FPS = 8;
+function viewOf(aa) { return aa < 0.42 ? 'front' : aa < 1.2 ? 'q' : aa < 1.95 ? 'side' : aa < 2.75 ? 'bq' : 'back'; }
 function drawChar(actor, key, x, z, yaw, walking, t, carry) {
-  const S = SET[key], a = screenAngle(yaw), aa = Math.abs(a), right = a > 0, step = Math.floor(t * FPS);
+  const S = SET[key], a = screenAngle(yaw), aa = Math.abs(a), step = Math.floor(t * FPS), now = performance.now();
+  // 방향 그림은 새 방향이 0.15초 넘게 유지될 때만 바꿈 (장애물 피할 때 깜빡임 방지)
+  const v = viewOf(aa), r = a > 0;
+  if (!actor.view) { actor.view = v; actor.right = r; }
+  if (v !== actor.view || r !== actor.right) { if (actor.candKey !== v + r) { actor.candKey = v + r; actor.candT = now; } else if (now - actor.candT > 150) { actor.view = v; actor.right = r; } }
+  else actor.candKey = null;
+  const view = actor.view, right = actor.right;
   actor.mesh.rotation.z = 0; actor.blob.scale.set(1, 0.6, 1);
   let name, flip = false;
   if (carry && S.carryClip) {                         // 작품 들고 걷기 (GIF 컷: 정면 · 3/4 · 옆, 원본은 오른쪽을 봄)
     const C = S.carryClip;
-    if (aa < 0.42) name = walking ? C.front[step % 4] : C.stand;
-    else if (aa < 1.2) { name = walking ? C.q[step % 4] : C.standQ; flip = !right; }
+    if (view === 'front') name = walking ? C.front[step % 4] : C.stand;
+    else if (view === 'q') { name = walking ? C.q[step % 4] : C.standQ; flip = !right; }
     else { name = walking ? C.side[step % 4] : C.standSide; flip = !right; }
-  } else if (carry) { name = S.carry[0]; flip = false; }
-  else if (aa < 0.42) name = walking ? S.walkFront[step % S.walkFront.length] : S.front;
-  else if (aa < 1.95) { name = walking ? S.walk[step % S.walk.length] : (aa < 1.2 ? S.q : S.side); flip = right; }
-  else if (aa < 2.75) { name = S.bq; flip = !right; }
+  } else if (carry) { name = S.carry[0]; }
+  else if (walking) {                                 // 걷기: 정면 컷 / 그 외(3/4·옆·뒤)는 옆 걷기 컷 — 뒤로 걷는 컷이 없어서 미끄러지지 않게
+    if (view === 'front') name = S.walkFront[step % S.walkFront.length];
+    else { name = S.walk[step % S.walk.length]; flip = right; }
+  }
+  else if (view === 'front') name = S.front;
+  else if (view === 'q' || view === 'side') { name = view === 'q' ? S.q : S.side; flip = right; }
+  else if (view === 'bq') { name = S.bq; flip = !right; }
   else name = S.back;
   showFrame(actor, name, x, z, flip);
 }
@@ -684,9 +698,10 @@ const teacherActor = makeActor();
 
 /* 공방 손님들(포스터 캐릭터): 그림이 한 장씩이라 보이는 데서는 걷지 않고,
    각자 자리에서 구경·작업을 해요. 내가 다른 방에 있거나 물레를 차는 동안에만 자리를 옮겨요. */
+// face: 그림 속 캐릭터가 보는 쪽 (-1 화면 왼쪽, 0 정면). 걷는 자세 그림(N_bowls, N_braid)은 서 있으면 굳어 보여서 걷기 컷이 생길 때까지 뺐어요.
 const NPCS = [
-  { name: 'N_beanie', room: 'studio' }, { name: 'N_cap', room: 'studio' }, { name: 'N_braid', room: 'dry' },
-  { name: 'N_smile', room: 'glaze' }, { name: 'N_glasses', room: 'gallery' }, { name: 'N_bowls', room: 'kiln' }
+  { name: 'N_beanie', room: 'studio', face: 0, likes: 'work' }, { name: 'N_cap', room: 'studio', face: -1, likes: 'look' },
+  { name: 'N_smile', room: 'glaze', face: 0, likes: 'work' }, { name: 'N_glasses', room: 'gallery', face: -1, likes: 'look' }
 ].map((v, i) => ({ ...v, actor: makeActor(), seed: i, state: 'do', until: 0, spot: null, x: 0, z: 0, obj: (() => { const g = new THREE.Group(); scene.add(g); return g; })() }));
 function npcBlocked(rid, x, z) {
   if (x < ROOM.x0 + 0.22 || x > ROOM.x1 - 0.22 || z < ROOM.z0 + 0.22 || z > ROOM.z1 - 0.22) return true;
@@ -699,12 +714,15 @@ function npcBlocked(rid, x, z) {
 function spotTaken(n, sp, room) { return NPCS.some(o => o !== n && o.room === room && o.spot === sp) || (partner.room === room && partner.spot === sp); }
 function npcRelocate(n, now) {          // 안 보일 때만: 다른 자리(가끔 다른 방)로 옮겨 둠
   if (Math.random() < 0.3) n.room = ROOM_ORDER[Math.floor(Math.random() * ROOM_ORDER.length)];
-  const free = ROOMS[n.room].spots.filter(sp => !spotTaken(n, sp, n.room));
+  const all = ROOMS[n.room].spots.filter(sp => !spotTaken(n, sp, n.room)), pref = all.filter(sp => sp.kind === n.likes), free = pref.length ? pref : all;
   n.spot = free.length ? free[Math.floor(Math.random() * free.length)] : ROOMS[n.room].spots[0];
   n.x = n.spot.x; n.z = n.spot.z; n.until = now + 9000 + Math.random() * 12000;
 }
-NPCS.forEach(n => { const f = ROOMS[n.room].spots.filter(sp => !NPCS.some(o => o !== n && o.spot === sp)); n.spot = f[n.seed % f.length]; n.x = n.spot.x; n.z = n.spot.z; n.until = performance.now() + 8000 + n.seed * 3000; });
+NPCS.forEach(n => { const all = ROOMS[n.room].spots.filter(sp => !NPCS.some(o => o !== n && o.spot === sp)), pref = all.filter(sp => sp.kind === n.likes), f = pref.length ? pref : all; n.spot = f[n.seed % f.length]; n.x = n.spot.x; n.z = n.spot.z; n.until = performance.now() + 8000 + n.seed * 3000; });
 const roomVisible = id => id === curRoom && !(window.HeukThrow && HeukThrow.active) && !fading;
+function peopleHere() { return NPCS.filter(n => n.room === curRoom).concat(partner.room === curRoom ? [partner] : []); }   // 지금 방에 보이는 손님·단짝
+// 보는 물건이 화면 오른쪽에 있으면 오른쪽을 보게 뒤집기
+function lookFlip(n) { if (!n.spot || !n.face) return false; const ox = Math.sin(n.spot.face), oz = Math.cos(n.spot.face), sx = ox * CAM_RIGHT.x + oz * CAM_RIGHT.z; return sx > 0.05; }
 
 /* 단짝 캐릭터: 내가 고르지 않은 캐릭터(A↔B). 걷기·작업 컷이 있어서 보이는 데서도 걸어 다녀요.
    B: 시유실 유약 작업대에서 붓으로 유약 바르기(GIF 12컷)  /  A: 작품을 들고 방을 오가며 구경(GIF 12컷) */
@@ -765,7 +783,7 @@ function drawNPCs(now, dt) {
     const show = n.room === curRoom; n.actor.mesh.visible = n.actor.blob.visible = show; n.obj.position.set(n.x, 0, n.z);
     if (!show) continue;
     n.actor.mesh.rotation.z = 0;
-    showFrame(n.actor, n.name, n.x, n.z, n.spot && n.spot.face !== undefined ? screenAngle(n.spot.face) > 0 : false);
+    showFrame(n.actor, n.name, n.x, n.z, lookFlip(n));
   }
   // 단짝
   const P = partner; partnerStep(dt, now); P.obj.position.set(P.x, 0, P.z);
@@ -795,9 +813,54 @@ function blocked(x, z) {
     if (c.type === 'circle') { if (Math.hypot(x - c.x, z - c.z) < c.r + R) return true; }
     else if (x > c.x0 - R && x < c.x1 + R && z > c.z0 - R && z < c.z1 + R) return true;
   }
+  for (const n of peopleHere()) if (Math.hypot(x - n.x, z - n.z) < 0.4) return true;   // 사람끼리 통과하지 않게
   return false;
 }
 let steerBias = 1; const keys = new Set(); let goal = null, sitting = false, sitTarget = null;
+function freeSpotNear(x, z) {          // 막히지 않은 가장 가까운 자리
+  if (!blocked(x, z)) return { x, z };
+  for (let r = 0.1; r < 2.5; r += 0.08) for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2, px = x + Math.sin(a) * r, pz = z + Math.cos(a) * r; if (!blocked(px, pz)) return { x: px, z: pz }; }
+  return { x, z };
+}
+function penetration(x, z) {           // 충돌 범위에 얼마나 깊이 들어가 있는지
+  let d = 0;
+  for (const c of colliders) {
+    if (c.type === 'circle') d = Math.max(d, c.r + R - Math.hypot(x - c.x, z - c.z));
+    else if (x > c.x0 - R && x < c.x1 + R && z > c.z0 - R && z < c.z1 + R) d = Math.max(d, Math.min(x - (c.x0 - R), c.x1 + R - x, z - (c.z0 - R), c.z1 + R - z));
+  }
+  for (const n of peopleHere()) d = Math.max(d, 0.4 - Math.hypot(x - n.x, z - n.z));
+  return d;
+}
+/* 길찾기(A*): 0.1칸 격자에서 장애물을 돌아가는 길을 찾고, 직선으로 갈 수 있는 구간은 합쳐요 */
+const CELL = 0.1;
+function clearLine(ax, az, bx, bz) { const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / 0.05); for (let i = 1; i <= n; i++) { const t = i / n; if (blocked(ax + (bx - ax) * t, az + (bz - az) * t)) return false; } return true; }
+function findPath(fx, fz, tx, tz) {
+  const t = freeSpotNear(tx, tz); tx = t.x; tz = t.z;
+  if (clearLine(fx, fz, tx, tz)) return [{ x: tx, z: tz }];
+  const X0 = ROOM.x0, Z0 = ROOM.z0, W = Math.ceil((ROOM.x1 - X0) / CELL) + 1, H = Math.ceil((ROOM.z1 - Z0) / CELL) + 1;
+  const ci = (x, z) => Math.round((x - X0) / CELL) + Math.round((z - Z0) / CELL) * W, cx = i => X0 + (i % W) * CELL, cz = i => Z0 + Math.floor(i / W) * CELL;
+  const free = new Int8Array(W * H).fill(-1), ok = i => { if (free[i] < 0) free[i] = blocked(cx(i), cz(i)) ? 0 : 1; return free[i] === 1; };
+  const start = ci(fx, fz), goalI = ci(tx, tz), g = new Float32Array(W * H).fill(1e9), from = new Int32Array(W * H).fill(-1), open = [start], closed = new Uint8Array(W * H);
+  g[start] = 0; const hh = i => Math.hypot(cx(i) - tx, cz(i) - tz);
+  let found = false, guard = 0;
+  while (open.length && guard++ < 20000) {
+    let bi = 0; for (let k = 1; k < open.length; k++) if (g[open[k]] + hh(open[k]) < g[open[bi]] + hh(open[bi])) bi = k;
+    const c = open.splice(bi, 1)[0]; if (c === goalI) { found = true; break; } closed[c] = 1;
+    const x = c % W, z = Math.floor(c / W);
+    for (const [ddx, ddz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const nx = x + ddx, nz = z + ddz; if (nx < 0 || nz < 0 || nx >= W || nz >= H) continue;
+      const n = nx + nz * W; if (closed[n] || (n !== goalI && !ok(n))) continue;
+      if (ddx && ddz && (!ok(x + ddx + z * W) || !ok(x + (z + ddz) * W))) continue;   // 모서리 끼기 방지
+      const ng = g[c] + (ddx && ddz ? 1.414 : 1); if (ng < g[n]) { g[n] = ng; from[n] = c; if (!open.includes(n)) open.push(n); }
+    }
+  }
+  if (!found) return [{ x: tx, z: tz }];
+  const pts = []; for (let i = goalI; i !== -1 && i !== start; i = from[i]) pts.unshift({ x: cx(i), z: cz(i) }); pts[pts.length - 1] = { x: tx, z: tz };
+  const out = []; let ax = fx, az = fz, k = 0;                   // 직선으로 갈 수 있으면 건너뛰기
+  while (k < pts.length) { let j = pts.length - 1; while (j > k && !clearLine(ax, az, pts[j].x, pts[j].z)) j--; out.push(pts[j]); ax = pts[j].x; az = pts[j].z; k = j + 1; }
+  return out;
+}
+function walkTo(x, z) { route = findPath(player.position.x, player.position.z, x, z); goal = route.shift(); }
 function stepMove(dx, dz, dt) {
   const len = Math.hypot(dx, dz); if (len < 1e-4) return false;
   const sp = 2.2 * dt, p = player.position, base = Math.atan2(dx, dz);
@@ -805,7 +868,8 @@ function stepMove(dx, dz, dt) {
   // 막히면 좌우로 조금씩 꺾어 장애물을 돌아감
   for (const off of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.57, -1.57]) {
     const a = base + (steerBias || 1) * off, mx = Math.sin(a) * sp, mz = Math.cos(a) * sp;
-    if (!blocked(p.x + mx, p.z + mz)) { p.x += mx; p.z += mz; moved = true; used = a; if (off) steerBias = Math.sign(off) * (steerBias || 1) || 1; break; }
+    const ok = !blocked(p.x + mx, p.z + mz) || (blocked(p.x, p.z) && penetration(p.x + mx, p.z + mz) < penetration(p.x, p.z));   // 이미 막힌 곳에 있으면 빠져나가는 쪽은 허용
+    if (ok) { p.x += mx; p.z += mz; moved = true; used = a; if (off) steerBias = Math.sign(off) * (steerBias || 1) || 1; break; }
   }
   const want = used; let diff = want - player.rotation.y;
   diff = Math.atan2(Math.sin(diff), Math.cos(diff)); player.rotation.y += diff * Math.min(1, dt * 12);
@@ -834,18 +898,18 @@ renderer.domElement.addEventListener('pointerup', e => {
   pendingPlace = null;
   // 문을 누르면 문 앞 매트로 걸어감
   const dh = ray.intersectObjects(ROOMS[curRoom].doors.map(d => d.g), true);
-  if (dh.length) { const d = ROOMS[curRoom].doors.find(d => { let o = dh[0].object; while (o) { if (o === d.g) return true; o = o.parent; } return false; }); if (d) { goal = { x: d.x, z: d.z }; route = []; sitTarget = null; showMarker(V(d.x, 0, d.z)); setHint(`${ROOM_INFO[d.to].icon} ${ROOM_INFO[d.to].name}(으)로 가요`); return; } }
+  if (dh.length) { const d = ROOMS[curRoom].doors.find(d => { let o = dh[0].object; while (o) { if (o === d.g) return true; o = o.parent; } return false; }); if (d) { sitTarget = null; route = findPath(player.position.x, player.position.z, d.x, d.z); route[route.length - 1] = { x: d.x, z: d.z }; goal = route.shift(); showMarker(V(d.x, 0, d.z)); setHint(`${ROOM_INFO[d.to].icon} ${ROOM_INFO[d.to].name}(으)로 가요`); return; } }
   if (curRoom === 'gallery') {
     const ph = ray.intersectObjects(PEDESTALS.map(p => p.g), true);
     if (ph.length) { const i = PEDESTALS.findIndex(p => { let o = ph[0].object; while (o) { if (o === p.g) return true; o = o.parent; } return false; });
       if (i >= 0) { const p = PEDESTALS[i]; if (carrying && !p.fixed && !p.piece) { walkToPedestal(i); setHint('받침대로 가서 내려놓아요'); } else pieceInfo(p); return; } }
   }
-  if (curRoom !== 'studio') { const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { goal = { x: pt.x, z: pt.z }; sitTarget = null; route = []; showMarker(pt); } return; }
+  if (curRoom !== 'studio') { const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { sitTarget = null; walkTo(pt.x, pt.z); showMarker(pt); } return; }
   // 물레를 누르면 앉으러 감
   if (ray.intersectObjects([WHEELS[2].g, WHEELS[2].stool], true).length || (() => { const p = V(); ray.ray.intersectPlane(ground, p); return p && Math.hypot(p.x - WHEELS[2].g.position.x, p.z - WHEELS[2].g.position.z) < 0.55; })()) { setHint('선생님 자리예요. 1·2번 물레를 써요'); return; }
   const hits = ray.intersectObjects(WHEELS.slice(0, 2).map(w => w.g), true);
   if (hits.length) { const w = WHEELS.find(w => hits[0].object.parent === w.g || hits[0].object.parent?.parent === w.g); if (w) return trySit(w); }
-  const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { goal = { x: pt.x, z: pt.z }; sitTarget = null; route = []; showMarker(pt); }
+  const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { sitTarget = null; walkTo(pt.x, pt.z); showMarker(pt); }
 });
 renderer.domElement.addEventListener('wheel', e => { viewTarget = THREE.MathUtils.clamp(viewTarget + e.deltaY * 0.006, 3, 11); e.preventDefault(); }, { passive: false });
 // 이동 목표 표시
@@ -866,9 +930,7 @@ function trySit(w = nearestFreeWheel(), force = false) {
   const approach = V(w.seat.x, 0, w.seat.z - 0.42), p = player.position;
   if (!force && Math.hypot(p.x - approach.x, p.z - approach.z) > 0.25) {
     // 물레 앞쪽에 있으면 옆으로 돌아서 뒤쪽 의자로
-    const side = p.x < w.g.position.x ? -1 : 1, sx = w.g.position.x + side * 0.85;
-    route = p.z > w.seat.z - 0.2 ? [{ x: sx, z: Math.max(p.z, w.g.position.z) }, { x: sx, z: approach.z }, { x: approach.x, z: approach.z }] : [{ x: approach.x, z: approach.z }];
-    goal = route.shift(); sitTarget = w; setHint('물레 쪽으로 걸어가요'); return;
+    walkTo(approach.x, approach.z); sitTarget = w; setHint('물레 쪽으로 걸어가요'); return;
   }
   route = [];
   sitting = true; goal = null; sitTarget = w;
@@ -878,7 +940,8 @@ function trySit(w = nearestFreeWheel(), force = false) {
 }
 function stand() {
   if (!sitting) return; sitting = false; standUp(player, sitTarget);
-  player.position.set(sitTarget.seat.x, 0, sitTarget.seat.z - 0.42); player.rotation.y = Math.PI;
+  const spot = freeSpotNear(sitTarget.seat.x, sitTarget.seat.z - 0.42); player.position.set(spot.x, 0, spot.z); player.rotation.y = Math.PI;
+  goal = null; route = []; keys.clear(); sitTarget = null;
   sitBtn.textContent = '물레에 앉기'; viewTarget = 8.2; setHint('바닥을 누르거나 WASD로 걸어요');
 }
 sitBtn.onclick = () => (sitting ? stand() : trySit());
@@ -1017,7 +1080,7 @@ const soonBtn = $('#soonBtn'), galleryBtn = $('#galleryBtn');
 soonBtn.onclick = () => setHint('이 방 활동은 곧 열려요! 지금은 둘러볼 수 있어요');
 carryBtn.onclick = () => { if (curRoom === 'studio') putOnTable(); else setHint('작업대는 물레실에 있어요. 🖼 전시관이나 🏺 물레실로 가요'); };
 galleryBtn.onclick = () => { const i = PEDESTALS.findIndex(p => !p.fixed && !p.piece); if (i < 0) return setHint('받침대가 꽉 찼어요'); walkToPedestal(i); };
-function walkToPedestal(i) { const p = PEDESTALS[i]; goal = { x: p.x, z: p.z + 0.62 }; route = []; pendingPlace = i; sitTarget = null; showMarker(V(goal.x, 0, goal.z)); }
+function walkToPedestal(i) { const p = PEDESTALS[i]; sitTarget = null; walkTo(p.x, p.z + 0.62); pendingPlace = i; showMarker(V(p.x, 0, p.z + 0.62)); }
 
 function arrivePending() {
   if (pendingPlace === null) return; const i = pendingPlace; pendingPlace = null; const p = PEDESTALS[i];
@@ -1028,6 +1091,10 @@ const clock = new THREE.Clock();
 function frame() {
   if (window.HeukThrow && window.HeukThrow.active) { clock.getDelta(); requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05), now = performance.now();
+  if (!window.__freeze) updateMove(dt);
+  afterMove(dt, now);
+}
+function updateMove(dt) {
   const u = player.userData;
   if (!sitting) {
     let dx = 0, dz = 0;
@@ -1041,17 +1108,20 @@ function frame() {
     if (dx || dz) moving = stepMove(dx, dz, dt);
     else if (goal) {
       const gx = goal.x - player.position.x, gz = goal.z - player.position.z;
-      if (Math.hypot(gx, gz) < 0.06) { if (route.length) goal = route.shift(); else { goal = null; marker.visible = false; if (sitTarget) trySit(sitTarget); arrivePending(); } }
+      if (Math.hypot(gx, gz) < 0.06) { if (route.length) goal = route.shift(); else { goal = null; marker.visible = false; if (sitTarget) trySit(sitTarget, Math.hypot(player.position.x - sitTarget.seat.x, player.position.z - sitTarget.seat.z) < 1.1); arrivePending(); } }
       else {
         moving = stepMove(gx, gz, dt);
         const d = Math.hypot(gx, gz);
         if (d < (goal.best ?? 1e9) - 0.02) { goal.best = d; goal.stuck = 0; } else goal.stuck = (goal.stuck || 0) + dt;
-        if (!moving || goal.stuck > 1.2) { if (route.length) { goal = route.shift(); } else { goal = null; marker.visible = false; if (sitTarget && Math.hypot(player.position.x - sitTarget.seat.x, player.position.z - sitTarget.seat.z) < 1.1) trySit(sitTarget, true); arrivePending(); } }
+        if ((!moving || goal.stuck > 1.2) && !goal.replanned) { const last = route.length ? route[route.length - 1] : goal; walkTo(last.x, last.z); if (goal) goal.replanned = true; }
+        else if (!moving || goal.stuck > 1.2) { if (route.length) { goal = route.shift(); } else { goal = null; marker.visible = false; if (sitTarget && Math.hypot(player.position.x - sitTarget.seat.x, player.position.z - sitTarget.seat.z) < 1.1) trySit(sitTarget, true); arrivePending(); } }
       }
     }
     u.walkAmt += ((moving ? 1 : 0) - u.walkAmt) * Math.min(1, dt * 10);
     if (moving) u.phase += dt * 9;
   }
+}
+function afterMove(dt, now) {
   // 앉아서 빚는 손 움직임
   drawPlayer(now); drawNPCs(now, dt); checkDoors();
   for (const d of ROOMS[curRoom].doors) d.glow.material.opacity = (carrying && d.to === 'gallery') || d.hover ? 0.45 + Math.sin(now * 0.006) * 0.3 : 0;
@@ -1098,7 +1168,7 @@ renderMyPieces(); addEventListener('heukmaru-pieces', renderMyPieces);
 // 들고 있던 작품이 있으면 다시 들기(새로고침 대비)
 { const c = loadPieces().find(o => o.place === 'carry'); if (c) carrying = c; }
 renderGallery(); applyRoom('studio', null); player.position.set(-2.6, 0, 2.4); doorLock = null; setHint('바닥을 누르거나 WASD로 걸어요');
-window.__heukmaru = { camera, get partner(){return partner}, GLAZE_SPOT: (typeof GLAZE_SPOT!=='undefined'?GLAZE_SPOT:null), goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
+window.__heukmaru = { camera, setGoalDirect(x, z) { goal = { x, z }; route = []; }, findPath, walkTo, sim(sec, keyset) { const k0 = [...keys]; keys.clear(); (keyset || []).forEach(k => keys.add(k)); window.__freeze = true; for (let t = 0; t < sec; t += 1 / 60) updateMove(1 / 60); keys.clear(); k0.forEach(k => keys.add(k)); window.__freeze = false; }, get sitTarget(){return sitTarget}, stepMove, freeSpotNear, penetration, get partner(){return partner}, GLAZE_SPOT: (typeof GLAZE_SPOT!=='undefined'?GLAZE_SPOT:null), goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
 })();
 </script>
 <script>/* 흙마루 — 물레 성형 모드
