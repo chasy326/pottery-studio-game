@@ -1277,8 +1277,8 @@ craftMoveSub3=function(dx,dy,e){var t=tool();if(t==='open'||t==='pull'||t==='fre
     if(gOn()){var rimGap=cInterp(T.r,1)-st.r[CN];if(lean*rimGap<0)lean*=.05;else if(Math.abs(lean)>Math.abs(rimGap))lean=rimGap;
       if(dH>0&&st.H>T.H+.01)dH=0;if(Math.abs(dx)>Math.abs(dy)*.8&&st.H>T.H+.008)dH=Math.min(dH,-Math.min(st.H-T.H,Math.abs(dx)*.0035));}
     var ok=craftCommit3(cPull(st,dH,lean));if(ok&&gOn())assist(Math.min(.3,Math.abs(dH)*3.4+Math.abs(lean)*1.5));return;}
-  if(t==='free'){var s2=craftTargetState3(),f=fingerLocal(lastPX+dx,lastPY+dy);if(!f)return;if(f.y<-.03||f.y>s2.H*1.08)return;
-    var bt=cClamp(f.y/Math.max(.01,s2.H),0,1),mv=Math.min(30,Math.hypot(dx,dy)),delta=(window.__sosoFreeDir===-1?-1:1)*mv*.00026;if(mv<.5)return;cs3.band=bt*CN;window.__sosoFreeT=bt;window.__sosoFreeAt=performance.now();
+  if(t==='free'){var s2=craftTargetState3(),f=fingerLocal(lastPX+dx,lastPY+dy);if(!f)return;if(f.y<-.15||f.y>s2.H+.15)return;
+    var bt=cClamp(f.y/Math.max(.01,s2.H),0,1),mv=Math.min(30,Math.hypot(dx,dy)),delta=(window.__sosoFreeDir===-1?-1:1)*mv*.00026*cClamp(.45/Math.max(.05,s2.H),1,4);if(mv<.5)return;cs3.band=bt*CN;window.__sosoFreeT=bt;window.__sosoFreeAt=performance.now();
     craftCommit3(cFree(s2,bt*CN,delta));return;}
   return _mv.apply(this,arguments);};
 /* --- 가이드: 맞는 곳은 초록, 다른 곳은 주황 + 일치율 --- */
@@ -1364,7 +1364,7 @@ requestAnimationFrame(loop);
 /* selected vessel: keep the card light, mark it with an outline */
 .vessel-card.selected.soso-candy,.vessel-card.selected{--face-top:#fffaf0!important;--face-mid:#fff1dc!important;--edge:#e97c31!important;--outline:#e97c31!important;background:#fff4e4!important;box-shadow:0 0 0 3px #e97c31 inset,0 4px 0 #c9662a!important}
 .vessel-card.selected strong,.vessel-card.selected small{color:#5b3a1f!important;text-shadow:none!important}
-#makeMode.soso-sideview{background-size:175% 175%!important;background-position:46% 4%!important}
+#makeMode.soso-sideview{background:radial-gradient(120% 70% at 50% 38%,#fbf1de 0%,#efdcbc 55%,#d3ad7f 100%)!important}
 #makeMode.soso-sideview .focus-stage{visibility:hidden!important}
 #sosoHeightHelp,#sosoCutHelp{position:absolute;z-index:16;pointer-events:none;display:none}
 #sosoHeightHelp.show,#sosoCutHelp.show{display:block}
@@ -1395,8 +1395,8 @@ var camT=null,camP=null,camFix=null;
 /* distance is decided once when the side view starts (room for the pot to grow), so the view never drifts back */
 function sideCam(snap){if(!window.cs3||cs3.view!=='side'||trimOn()||cs3.isTrim)return;try{var P=potGroup3.position,k=potGroup3.scale.x,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
   if(!camFix){var rNow=Math.max.apply(null,radiusProfile),hNow=heightScale,T=null;try{if(CSPECS[vessel])T=cSpecState(vessel);}catch(e){}
-    var R=Math.max(.2,rNow*1.45);try{R=Math.min(R,CCFG.capR*1.05);}catch(e){}R*=k;var h=Math.max(.2,hNow)*1.15*k;
-    var ELV=THREE.MathUtils.degToRad(16),D=Math.max((R*2*1.7)/(2*tanH*aspect),(h*1.9)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.42};}
+    var R=Math.max(.18,rNow*1.12);try{R=Math.min(R,CCFG.capR*1.05);}catch(e){}R*=k;var h=Math.max(.2,hNow)*1.15*k;
+    var ELV=THREE.MathUtils.degToRad(30),D=Math.max((R*2*1.5)/(2*tanH*aspect),(h*2.2)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.3};}
   var tgt=new THREE.Vector3(P.x,P.y+camFix.ty,P.z),pos=new THREE.Vector3(tgt.x,tgt.y+camFix.D*Math.sin(camFix.ELV),tgt.z+camFix.D*Math.cos(camFix.ELV));
   if(snap||!camT){camT=tgt.clone();camP=pos.clone();}else{camT.lerp(tgt,.08);camP.lerp(pos,.08);}
   try{wheelGroup3.visible=true;}catch(e){}camera3.position.copy(camP);camera3.up.set(0,1,0);camera3.lookAt(camT);camera3.zoom=1;camera3.setViewOffset(W,H,0,Math.round(H*.07),W,H);camera3.updateProjectionMatrix();camera3.updateMatrixWorld(true);}catch(e){}}
@@ -1437,7 +1437,7 @@ document.addEventListener('click',function(e){try{var b=e.target.closest&&e.targ
 })();
 </script>
 <style id="soso-v12-style">
-#sosoFreeBtns{position:absolute;z-index:18;right:10px;top:46%;transform:translateY(-50%);display:none;flex-direction:column;gap:14px;align-items:center}
+#sosoFreeBtns{position:absolute;z-index:18;left:50%;bottom:190px;transform:translateX(-50%);display:none;flex-direction:row;gap:34px;align-items:flex-end}
 #sosoFreeBtns.show{display:flex}
 #sosoFreeBtns .fb{all:unset;position:relative;display:block;width:52px;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:center}
 #sosoFreeBtns .fb .cb{position:relative;display:block;width:50px;height:52px;margin:0 auto}
@@ -1485,7 +1485,7 @@ function ringUpdate(free){try{if(!ring){ring=new THREE.Mesh(new THREE.TorusGeome
   var st=cs3.renderState||craftTargetState3(),t=window.__sosoFreeT||.5,r=cInterp(st.r,t)+.012;ring.position.y=st.H*t;ring.scale.set(r,r,r);ring.material.color.setHex(window.__sosoFreeDir===-1?0xffd0d6:0xffffff);}catch(e){}}
 var hintEl=null;
 function loop(){requestAnimationFrame(loop);try{ensure();if(!box)return;var free=vis()&&cs3.freeMode&&!cs3.cut&&cs3.centered;
-  if(free&&!wasFree)setDir(1);wasFree=free;box.classList.toggle('show',!!free);ringUpdate(free);
+  if(free&&!wasFree)setDir(1);wasFree=free;box.classList.toggle('show',!!free);if(free){var mh=document.getElementById('makeHint'),mm=document.getElementById('makeMode');if(mh&&mm){var hr=mh.getBoundingClientRect();if(hr.height>0){var bb=Math.round(mm.getBoundingClientRect().bottom-hr.top+20)+'px';if(box.style.bottom!==bb)box.style.bottom=bb;}}}ringUpdate(free);
   if(free){hintEl=hintEl||document.getElementById('makeHint');var tx=window.__sosoFreeDir===-1?'벽을 위아래로 문지르면 안으로 들어가요':'벽을 위아래로 문지르면 바깥으로 늘어나요';if(hintEl&&hintEl.textContent!==tx)hintEl.textContent=tx;}
 }catch(e){}}
 requestAnimationFrame(loop);

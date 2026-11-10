@@ -6,10 +6,10 @@ def rep(a,b,n=1):
     s=s.replace(a,b)
 # free shaping: the chosen button decides the direction; the touched height decides where
 rep("""var bt=cClamp(f.y/Math.max(.01,s2.H),0,1),cr=cInterp(s2.r,bt),gap=f.r-cr,mv=Math.hypot(dx,dy),delta=cClamp(gap*Math.min(1,mv*.035)*(gap<0?.55:.35),-.02,.02);if(Math.abs(f.r-cr)<.004)return;cs3.band=bt*CN;""",
-"""var bt=cClamp(f.y/Math.max(.01,s2.H),0,1),mv=Math.min(30,Math.hypot(dx,dy)),delta=(window.__sosoFreeDir===-1?-1:1)*mv*.00026;if(mv<.5)return;cs3.band=bt*CN;window.__sosoFreeT=bt;window.__sosoFreeAt=performance.now();""")
-rep("if(f.y<0||f.y>s2.H*1.02)return;","if(f.y<-.03||f.y>s2.H*1.08)return;")
+"""var bt=cClamp(f.y/Math.max(.01,s2.H),0,1),mv=Math.min(30,Math.hypot(dx,dy)),delta=(window.__sosoFreeDir===-1?-1:1)*mv*.00026*cClamp(.45/Math.max(.05,s2.H),1,4);if(mv<.5)return;cs3.band=bt*CN;window.__sosoFreeT=bt;window.__sosoFreeAt=performance.now();""")
+rep("if(f.y<0||f.y>s2.H*1.02)return;","if(f.y<-.15||f.y>s2.H+.15)return;")
 extra=r'''<style id="soso-v12-style">
-#sosoFreeBtns{position:absolute;z-index:18;right:10px;top:46%;transform:translateY(-50%);display:none;flex-direction:column;gap:14px;align-items:center}
+#sosoFreeBtns{position:absolute;z-index:18;left:50%;bottom:190px;transform:translateX(-50%);display:none;flex-direction:row;gap:34px;align-items:flex-end}
 #sosoFreeBtns.show{display:flex}
 #sosoFreeBtns .fb{all:unset;position:relative;display:block;width:52px;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:center}
 #sosoFreeBtns .fb .cb{position:relative;display:block;width:50px;height:52px;margin:0 auto}
@@ -57,7 +57,7 @@ function ringUpdate(free){try{if(!ring){ring=new THREE.Mesh(new THREE.TorusGeome
   var st=cs3.renderState||craftTargetState3(),t=window.__sosoFreeT||.5,r=cInterp(st.r,t)+.012;ring.position.y=st.H*t;ring.scale.set(r,r,r);ring.material.color.setHex(window.__sosoFreeDir===-1?0xffd0d6:0xffffff);}catch(e){}}
 var hintEl=null;
 function loop(){requestAnimationFrame(loop);try{ensure();if(!box)return;var free=vis()&&cs3.freeMode&&!cs3.cut&&cs3.centered;
-  if(free&&!wasFree)setDir(1);wasFree=free;box.classList.toggle('show',!!free);ringUpdate(free);
+  if(free&&!wasFree)setDir(1);wasFree=free;box.classList.toggle('show',!!free);if(free){var mh=document.getElementById('makeHint'),mm=document.getElementById('makeMode');if(mh&&mm){var hr=mh.getBoundingClientRect();if(hr.height>0){var bb=Math.round(mm.getBoundingClientRect().bottom-hr.top+20)+'px';if(box.style.bottom!==bb)box.style.bottom=bb;}}}ringUpdate(free);
   if(free){hintEl=hintEl||document.getElementById('makeHint');var tx=window.__sosoFreeDir===-1?'벽을 위아래로 문지르면 안으로 들어가요':'벽을 위아래로 문지르면 바깥으로 늘어나요';if(hintEl&&hintEl.textContent!==tx)hintEl.textContent=tx;}
 }catch(e){}}
 requestAnimationFrame(loop);

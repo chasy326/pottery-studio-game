@@ -17,7 +17,7 @@ extra=r'''<style id="soso-v11-style">
 /* selected vessel: keep the card light, mark it with an outline */
 .vessel-card.selected.soso-candy,.vessel-card.selected{--face-top:#fffaf0!important;--face-mid:#fff1dc!important;--edge:#e97c31!important;--outline:#e97c31!important;background:#fff4e4!important;box-shadow:0 0 0 3px #e97c31 inset,0 4px 0 #c9662a!important}
 .vessel-card.selected strong,.vessel-card.selected small{color:#5b3a1f!important;text-shadow:none!important}
-#makeMode.soso-sideview{background-size:175% 175%!important;background-position:46% 4%!important}
+#makeMode.soso-sideview{background:radial-gradient(120% 70% at 50% 38%,#fbf1de 0%,#efdcbc 55%,#d3ad7f 100%)!important}
 #makeMode.soso-sideview .focus-stage{visibility:hidden!important}
 #sosoHeightHelp,#sosoCutHelp{position:absolute;z-index:16;pointer-events:none;display:none}
 #sosoHeightHelp.show,#sosoCutHelp.show{display:block}
@@ -48,8 +48,8 @@ var camT=null,camP=null,camFix=null;
 /* distance is decided once when the side view starts (room for the pot to grow), so the view never drifts back */
 function sideCam(snap){if(!window.cs3||cs3.view!=='side'||trimOn()||cs3.isTrim)return;try{var P=potGroup3.position,k=potGroup3.scale.x,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
   if(!camFix){var rNow=Math.max.apply(null,radiusProfile),hNow=heightScale,T=null;try{if(CSPECS[vessel])T=cSpecState(vessel);}catch(e){}
-    var R=Math.max(.2,rNow*1.45);try{R=Math.min(R,CCFG.capR*1.05);}catch(e){}R*=k;var h=Math.max(.2,hNow)*1.15*k;
-    var ELV=THREE.MathUtils.degToRad(16),D=Math.max((R*2*1.7)/(2*tanH*aspect),(h*1.9)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.42};}
+    var R=Math.max(.18,rNow*1.12);try{R=Math.min(R,CCFG.capR*1.05);}catch(e){}R*=k;var h=Math.max(.2,hNow)*1.15*k;
+    var ELV=THREE.MathUtils.degToRad(30),D=Math.max((R*2*1.5)/(2*tanH*aspect),(h*2.2)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.3};}
   var tgt=new THREE.Vector3(P.x,P.y+camFix.ty,P.z),pos=new THREE.Vector3(tgt.x,tgt.y+camFix.D*Math.sin(camFix.ELV),tgt.z+camFix.D*Math.cos(camFix.ELV));
   if(snap||!camT){camT=tgt.clone();camP=pos.clone();}else{camT.lerp(tgt,.08);camP.lerp(pos,.08);}
   try{wheelGroup3.visible=true;}catch(e){}camera3.position.copy(camP);camera3.up.set(0,1,0);camera3.lookAt(camT);camera3.zoom=1;camera3.setViewOffset(W,H,0,Math.round(H*.07),W,H);camera3.updateProjectionMatrix();camera3.updateMatrixWorld(true);}catch(e){}}
