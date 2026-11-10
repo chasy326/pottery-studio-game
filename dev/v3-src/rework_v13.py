@@ -1,5 +1,11 @@
 W='/tmp/claude-0/-home-claude/21c0dae6-b055-5be0-9efe-188c940e0baa/scratchpad/work/'
 s=open(W+'소소도예_v3_굽깎기.html',encoding='utf-8').read()
+def rep(a,b,n=1):
+    global s
+    assert s.count(a)==n,(a[:60],s.count(a))
+    s=s.replace(a,b)
+# fit guide: add base and middle rings so the target reads as a vessel
+rep("fit.add(rim);fit.userData.rim=rim;","fit.add(rim);fit.userData.rim=rim;[0,.5].forEach(function(tt){var rg=new THREE.Mesh(new THREE.TorusGeometry(cInterp(T.r,tt),.007,6,64),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.55,depthTest:false,depthWrite:false}));rg.rotation.x=Math.PI/2;rg.position.y=T.H*tt;rg.renderOrder=6;fit.add(rg);});")
 extra=r'''<style id="soso-v13-style">
 .tooltray .tool.selected,.tooltray .tool.selected *{text-shadow:none!important}
 #sosoViewToggle{height:40px!important;min-height:40px!important;min-width:84px!important;padding:0 11px 0 7px!important;border-radius:20px!important;font-size:15px!important;gap:3px!important}
@@ -29,6 +35,17 @@ function loop(){requestAnimationFrame(loop);try{var m=document.getElementById('m
   if(!seen&&!armed&&open&&trim&&__sosoTrim.phase==='carve'){armed=true;seen=true;try{localStorage.setItem(KEY,'1');}catch(e){}setTimeout(show,700);}
 }catch(e){}}
 requestAnimationFrame(loop);
+/* front view: pot no longer bigger than the painted wheel */
+try{craftRigCfg3.grow=1.05;}catch(e){}
+/* side view: a splash tub under the wheel head, stand hidden, so the wheel never floats */
+var tub=null,stem=null;
+function sideDeco(){requestAnimationFrame(sideDeco);try{if(!wheelGroup3)return;var m=document.getElementById('makeMode'),on=m&&m.classList.contains('show')&&window.cs3&&cs3.view==='side'&&!cs3.isTrim&&!(window.__sosoTrim&&__sosoTrim.active);
+  if(!tub){var G=new THREE.Color(0xa9c99b).convertSRGBToLinear(),G2=new THREE.Color(0xd3e6c8).convertSRGBToLinear();tub=new THREE.Group();tub.name='soso_tub';
+    var wall=new THREE.Mesh(new THREE.CylinderGeometry(1.42,1.30,1.8,72,1,true),new THREE.MeshStandardMaterial({color:G,roughness:.7,side:THREE.DoubleSide}));wall.position.y=-.03-.9;tub.add(wall);
+    var lip=new THREE.Mesh(new THREE.TorusGeometry(1.42,.055,10,72),new THREE.MeshStandardMaterial({color:G2,roughness:.55}));lip.rotation.x=Math.PI/2;lip.position.y=-.03;tub.add(lip);
+    wheelGroup3.add(tub);wheelGroup3.children.forEach(function(c){if(c.geometry&&c.geometry.parameters&&Math.abs((c.geometry.parameters.height||0)-.63)<.001)stem=c;});}
+  if(tub.parent!==wheelGroup3)wheelGroup3.add(tub);tub.visible=!!on;if(stem)stem.visible=!on;}catch(e){}}
+requestAnimationFrame(sideDeco);
 })();
 </script>
 '''
