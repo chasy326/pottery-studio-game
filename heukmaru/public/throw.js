@@ -613,6 +613,8 @@ function finishPiece() {
 function showResult(html) { const v = $('[data-v="result"]'); v.querySelector('.tw-card').innerHTML = html; v.hidden = false; v.querySelectorAll('button').forEach(b => b.onclick = () => act(b.dataset.a)); }
 
 /* ---------- 버튼 ---------- */
+// 전시된 작품은 지우지 않고, 나머지는 최근 30개까지만 보관
+function trimPieces(list) { let k = 0; return list.filter(pc => pc.place === 'gallery' || pc.place === 'carry' || k++ < 30); }
 function act(a) {
   if (a === 'water') {
     if (STEPS[st.step].key === 'attach' || STEPS[st.step].key === 'wire') return warn('지금은 물이 필요 없어요', 1000);
@@ -626,13 +628,13 @@ function act(a) {
   if (a === 'setup') { $('[data-v="result"]').hidden = true; reset(); $('[data-v="setup"]').hidden = false; }
   if (a === 'start') { $('[data-v="setup"]').hidden = true; reset(); }
   if (a === 'save') {
-    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift({ ...st.lastPiece, place: 'table' }); localStorage.setItem('heukmaru-pieces', JSON.stringify(list.slice(0, 40))); } catch {}
+    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift({ ...st.lastPiece, place: 'table' }); localStorage.setItem('heukmaru-pieces', JSON.stringify(trimPieces(list))); } catch {}
     window.dispatchEvent(new CustomEvent('heukmaru-pieces'));
     $('[data-v="result"]').hidden = true; reset(); warn('공방 긴 작업대에 올려뒀어요 ✓', 1600);
   }
   if (a === 'carry') {
     const pc = { ...st.lastPiece, place: 'carry' };
-    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift(pc); localStorage.setItem('heukmaru-pieces', JSON.stringify(list.slice(0, 40))); } catch {}
+    try { const list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); list.unshift(pc); localStorage.setItem('heukmaru-pieces', JSON.stringify(trimPieces(list))); } catch {}
     $('[data-v="result"]').hidden = true; reset(); const cb = st.onCarry; close(); if (cb) cb(pc); return;
   }
   if (a === 'leave') close();
