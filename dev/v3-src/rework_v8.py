@@ -35,6 +35,7 @@ cFree=function(st0,index,delta){if(!cHollow(st0.H,st0.f))return _cFree.apply(thi
   for(var k=0;k<32;k++){var m=(lo+hi)/2;if(cVol(r,m,st0.f,w)>clayV0)hi=m;else lo=m;}return{ok:true,st:{r:r,H:(lo+hi)/2,f:st0.f,w:w},applied:1};};
 var _mv=craftMoveSub3;
 var mvDist=0,mvPid=null;
+document.addEventListener('pointerdown',function(){try{mvPid='__new';mvDist=0;if(window.cs3){cs3.__lockPid='__new';cs3.__lockBand=null;}}catch(e){}},true);
 function markStage(dx,dy){try{if(cs3.activePointer!==mvPid){mvPid=cs3.activePointer;mvDist=0;}mvDist+=Math.abs(dx)+Math.abs(dy);if(mvDist<18)return;var sd=window.__sosoStageDone;if(!sd)return;var n=cs3.freeMode?3:cs3.step;if((n===2||n===3)&&!sd[n]){sd[n]=true;setTimeout(function(){try{craftRefresh3();}catch(e){}},0);}}catch(e){}}
 craftMoveSub3=function(dx,dy,e){var t=tool();if(t==='open'||t==='pull'||t==='free')markStage(dx,dy);
   if(t==='open'&&cs3.view!=='top'){if(Math.abs(dx)>Math.abs(dy)*1.3)return _mv.call(this,dx*.6,0,e);return _mv.call(this,0,dy,e);}
