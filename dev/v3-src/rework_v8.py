@@ -35,6 +35,7 @@ cFree=function(st0,index,delta){if(!cHollow(st0.H,st0.f))return _cFree.apply(thi
   for(var k=0;k<32;k++){var m=(lo+hi)/2;if(cVol(r,m,st0.f,w)>clayV0)hi=m;else lo=m;}return{ok:true,st:{r:r,H:(lo+hi)/2,f:st0.f,w:w},applied:1};};
 var _mv=craftMoveSub3;
 var mvDist=0,mvPid=null;
+function fingerLocal(x,y){try{var c=renderer3.domElement.getBoundingClientRect(),ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((x-c.left)/c.width*2-1,-((y-c.top)/c.height)*2+1),camera3);var P=potGroup3.position.clone(),n=camera3.position.clone().sub(P);n.y=0;if(n.lengthSq()<1e-6)return null;n.normalize();var pl=new THREE.Plane().setFromNormalAndCoplanarPoint(n,P),hit=new THREE.Vector3();if(!ray.ray.intersectPlane(pl,hit))return null;var k=potGroup3.scale.x,d=hit.sub(P);var rr=Math.sqrt(d.x*d.x+d.z*d.z)/k;return {r:rr,y:d.y/k};}catch(e){return null;}}
 document.addEventListener('pointerdown',function(){try{mvPid='__new';mvDist=0;if(window.cs3){cs3.__lockPid='__new';cs3.__lockBand=null;}}catch(e){}},true);
 function markStage(dx,dy){try{if(cs3.activePointer!==mvPid){mvPid=cs3.activePointer;mvDist=0;}mvDist+=Math.abs(dx)+Math.abs(dy);if(mvDist<18)return;var sd=window.__sosoStageDone;if(!sd)return;var n=cs3.freeMode?3:cs3.step;if((n===2||n===3)&&!sd[n]){sd[n]=true;setTimeout(function(){try{craftRefresh3();}catch(e){}},0);}}catch(e){}}
 craftMoveSub3=function(dx,dy,e){var t=tool();if(t==='open'||t==='pull'||t==='free')markStage(dx,dy);
@@ -45,7 +46,9 @@ craftMoveSub3=function(dx,dy,e){var t=tool();if(t==='open'||t==='pull'||t==='fre
     if(gOn()){var rimGap=cInterp(T.r,1)-st.r[CN];if(lean*rimGap<0)lean*=.05;else if(Math.abs(lean)>Math.abs(rimGap))lean=rimGap;
       if(dH>0&&st.H>T.H+.01)dH=0;if(Math.abs(dx)>Math.abs(dy)*.8&&st.H>T.H+.008)dH=Math.min(dH,-Math.min(st.H-T.H,Math.abs(dx)*.0035));}
     var ok=craftCommit3(cPull(st,dH,lean));if(ok&&gOn())assist(Math.min(.3,Math.abs(dH)*3.4+Math.abs(lean)*1.5));return;}
-  if(t==='free'){if(cs3.__lockPid!==cs3.activePointer||cs3.__lockPid==null){cs3.__lockPid=cs3.activePointer;cs3.__lockBand=cs3.band;}if(cs3.__lockBand!=null)cs3.band=cs3.__lockBand;var s2=craftTargetState3(),delta=dx*cs3.side*.0021;if(gOn()){var T2=tgt(),bt=cs3.band/CN,yAbs=bt*s2.H,tr=yAbs<=T2.H?cInterp(T2.r,yAbs/T2.H):null,cr=cInterp(s2.r,bt);if(tr!=null){var over=(cr+delta)-tr;if(Math.abs(over)>.07&&over*delta>0)delta*=.5;}}craftCommit3(cFree(s2,cs3.band,delta));return;}
+  if(t==='free'){var s2=craftTargetState3(),f=fingerLocal(lastPX+dx,lastPY+dy);if(!f)return;if(f.y<0||f.y>s2.H*1.02)return;
+    var bt=cClamp(f.y/Math.max(.01,s2.H),0,1),cr=cInterp(s2.r,bt),gap=f.r-cr,mv=Math.hypot(dx,dy),delta=cClamp(gap*Math.min(1,mv*.035)*(gap<0?.55:.35),-.02,.02);if(Math.abs(f.r-cr)<.004)return;cs3.band=bt*CN;
+    craftCommit3(cFree(s2,bt*CN,delta));return;}
   return _mv.apply(this,arguments);};
 /* --- 가이드: 맞는 곳은 초록, 다른 곳은 주황 + 일치율 --- */
 var N=18,fit=null,lastV=null,lastUp=0,pill=null;
