@@ -502,15 +502,15 @@ function ik(a, c, l1, l2, pole) {          // 두 마디 IK → [팔꿈치/무�
 }
 
 /* ---------- 그림 캐릭터 (직접 만든 캐릭터 시트에서 오려낸 컷) ---------- */
-const SPR = {"A_back": [95, 210], "A_big": [258, 517], "A_bowl1": [67, 123], "A_bowl2": [65, 124], "A_bq": [85, 212], "A_cheer": [83, 125], "A_front": [95, 209], "A_q": [89, 210], "A_side": [88, 212], "A_w1": [64, 114], "A_w2": [58, 110], "A_w3": [58, 110], "A_w4": [59, 110], "A_wheel": [77, 120], "B_back": [91, 215], "B_big": [201, 519], "B_bowl": [56, 119], "B_bq": [95, 214], "B_cheer": [86, 123], "B_f1": [58, 121], "B_front": [93, 216], "B_q": [91, 216], "B_side": [103, 215], "B_w1": [62, 112], "B_w2": [61, 115], "B_w3": [56, 117], "B_x1": [66, 122], "B_x2": [67, 122], "B_x3": [69, 121], "N_beanie": [144, 346], "N_bowls": [182, 340], "N_braid": [204, 335], "N_cap": [160, 336], "N_glasses": [162, 326], "N_smile": [175, 337], "N_teacher": [198, 321]};
+const SPR = {"A_back": [95, 210], "A_big": [258, 517], "A_bowl1": [67, 123], "A_bowl2": [65, 124], "A_bq": [85, 212], "A_cheer": [83, 125], "A_front": [95, 209], "A_q": [89, 210], "A_side": [88, 212], "A_w1": [64, 114], "A_w2": [58, 110], "A_w3": [58, 110], "A_w4": [59, 110], "A_wheel": [77, 120], "B_back": [91, 215], "B_big": [201, 519], "B_bowl": [56, 119], "B_bq": [95, 214], "B_cheer": [86, 123], "B_f1": [58, 121], "B_front": [93, 216], "B_q": [91, 216], "B_side": [103, 215], "B_w1": [62, 112], "B_w2": [61, 115], "B_w3": [56, 117], "B_x1": [66, 122], "B_x2": [67, 122], "B_x3": [69, 121], "N_beanie": [144, 346], "N_bowls": [182, 340], "N_braid": [204, 335], "N_cap": [160, 336], "N_glasses": [162, 326], "N_smile": [175, 337], "N_teacher": [198, 321], "A_cw0": [180, 340], "A_cw1": [180, 340], "A_cw2": [180, 340], "A_cw3": [180, 340], "A_cw4": [180, 340], "A_cw5": [180, 340], "A_cw6": [180, 340], "A_cw7": [180, 340], "A_cw8": [180, 340], "A_cw9": [180, 340], "A_cw10": [180, 340], "A_cw11": [180, 340], "B_gl0": [285, 349], "B_gl1": [285, 349], "B_gl2": [285, 349], "B_gl3": [285, 349], "B_gl4": [285, 349], "B_gl5": [285, 349], "B_gl6": [285, 349], "B_gl7": [285, 349], "B_gl8": [285, 349], "B_gl9": [285, 349], "B_gl10": [285, 349], "B_gl11": [285, 349]}
 const texLoader = new THREE.TextureLoader(), texCache = {};
 function tex(name) { if (!texCache[name]) { const t = texLoader.load('/chars/' + name + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texCache[name] = t; } return texCache[name]; }
 Object.keys(SPR).forEach(tex);                                  // 미리 불러오기
 const CAM_YAW = Math.atan2(ISO.x, ISO.z);
 const ELEV_FIX = 1 / Math.hypot(ISO.x, ISO.z);                   // 세운 판을 위에서 볼 때 줄어드는 높이 보정
 const CHAR_H = 1.3;
-const K = { sheet: CHAR_H / 211, small: CHAR_H / 112, poster: CHAR_H / 336 };
-const kOf = n => n.startsWith('N_') ? K.poster : (/_(front|q|side|back|bq)$/.test(n) ? K.sheet : K.small);
+const K = { sheet: CHAR_H / 211, small: CHAR_H / 112, poster: CHAR_H / 336, cw: CHAR_H / 330, gl: 0.72 / 230 };
+const kOf = n => n.startsWith('N_') ? K.poster : n.startsWith('A_cw') ? K.cw : n.startsWith('B_gl') ? K.gl : (/_(front|q|side|back|bq)$/.test(n) ? K.sheet : K.small);
 const blobGeo = new THREE.CircleGeometry(0.26, 24), blobMat = new THREE.MeshBasicMaterial({ color: '#2a1f18', transparent: true, opacity: 0.22, depthWrite: false });
 function makeActor() {
   const geo = new THREE.PlaneGeometry(1, 1); geo.translate(0, 0.5, 0);
@@ -529,8 +529,8 @@ function showFrame(a, name, x, z, flip = false, lift = 0, squash = 1) {
 const CAM_RIGHT = V(Math.cos(CAM_YAW), 0, -Math.sin(CAM_YAW)), TO_CAM = V(Math.sin(CAM_YAW), 0, Math.cos(CAM_YAW));
 function screenAngle(yaw) { const d = V(Math.sin(yaw), 0, Math.cos(yaw)); return Math.atan2(d.dot(CAM_RIGHT), d.dot(TO_CAM)); }
 const SET = {
-  A: { front: 'A_front', q: 'A_q', side: 'A_side', bq: 'A_bq', back: 'A_back', walk: ['A_w2', 'A_w3', 'A_w4', 'A_w3'], walkFront: ['A_w1', 'A_front'], sit: ['A_wheel'], big: 'A_big', cheer: 'A_cheer', carry: ['A_bowl1', 'A_bowl2'] },
-  B: { front: 'B_front', q: 'B_q', side: 'B_side', bq: 'B_bq', back: 'B_back', walk: ['B_w1', 'B_w2'], walkFront: ['B_front'], sit: ['B_x1', 'B_x2', 'B_x3', 'B_x2'], big: 'B_big', cheer: 'B_cheer', carry: ['B_bowl'] }
+  A: { front: 'A_front', q: 'A_q', side: 'A_side', bq: 'A_bq', back: 'A_back', walk: ['A_w2', 'A_w3', 'A_w4', 'A_w3'], walkFront: ['A_w1', 'A_front'], sit: ['A_wheel'], big: 'A_big', cheer: 'A_cheer', carry: ['A_bowl1', 'A_bowl2'], carryClip: { front: ['A_cw0', 'A_cw1', 'A_cw2', 'A_cw3'], q: ['A_cw4', 'A_cw5', 'A_cw6', 'A_cw7'], side: ['A_cw8', 'A_cw9', 'A_cw10', 'A_cw11'], stand: 'A_cw0', standQ: 'A_cw4', standSide: 'A_cw8' } },
+  B: { front: 'B_front', q: 'B_q', side: 'B_side', bq: 'B_bq', back: 'B_back', walk: ['B_w1', 'B_w2', 'B_w3', 'B_w2'], walkFront: ['B_front'], sit: ['B_x1', 'B_x2', 'B_x3', 'B_x2'], big: 'B_big', cheer: 'B_cheer', carry: ['B_bowl'] }
 };
 let PLAYER_KEY = 'A';
 try { PLAYER_KEY = localStorage.getItem('heukmaru-char') === 'B' ? 'B' : 'A'; } catch {}
@@ -539,31 +539,35 @@ const player = new THREE.Group(); scene.add(player);
 player.position.set(-2.6, 0, 2.4); player.rotation.y = Math.PI * 0.25;
 player.userData = { pose: 'stand', walkAmt: 0, phase: 0 };
 const playerActor = makeActor();
+/* 캐릭터 그리기: 몸을 기울이거나 튕기지 않고, 그림 컷만 바꿔서 움직임을 만든다 (초당 8컷) */
+const FPS = 8;
+function drawChar(actor, key, x, z, yaw, walking, t, carry) {
+  const S = SET[key], a = screenAngle(yaw), aa = Math.abs(a), right = a > 0, step = Math.floor(t * FPS);
+  actor.mesh.rotation.z = 0; actor.blob.scale.set(1, 0.6, 1);
+  let name, flip = false;
+  if (carry && S.carryClip) {                         // 작품 들고 걷기 (GIF 컷: 정면 · 3/4 · 옆, 원본은 오른쪽을 봄)
+    const C = S.carryClip;
+    if (aa < 0.42) name = walking ? C.front[step % 4] : C.stand;
+    else if (aa < 1.2) { name = walking ? C.q[step % 4] : C.standQ; flip = !right; }
+    else { name = walking ? C.side[step % 4] : C.standSide; flip = !right; }
+  } else if (carry) { name = S.carry[0]; flip = false; }
+  else if (aa < 0.42) name = walking ? S.walkFront[step % S.walkFront.length] : S.front;
+  else if (aa < 1.95) { name = walking ? S.walk[step % S.walk.length] : (aa < 1.2 ? S.q : S.side); flip = right; }
+  else if (aa < 2.75) { name = S.bq; flip = !right; }
+  else name = S.back;
+  showFrame(actor, name, x, z, flip);
+}
 function drawPlayer(now) {
   const u = player.userData, S = SET[PLAYER_KEY], p = player.position;
   playerActor.mesh.rotation.z = 0;
   if (u.pose === 'sit') {
-    const w = sitTarget, f = S.sit[Math.floor(now / 260) % S.sit.length];
-    showFrame(playerActor, f, w.g.position.x, w.g.position.z - 0.12, false, 0, 1 + Math.sin(now * 0.008) * 0.008);
+    const w = sitTarget, f = S.sit[Math.floor(now / 1000 * 4) % S.sit.length];
+    showFrame(playerActor, f, w.g.position.x, w.g.position.z - 0.12, false);
     playerActor.blob.scale.set(1.6, 0.9, 1);
     return;
   }
-  playerActor.blob.scale.set(1, 0.6, 1);
-  if (performance.now() < cheerUntil) { showFrame(playerActor, S.cheer, p.x, p.z, false, Math.abs(Math.sin(now * 0.012)) * 0.06); return; }
-  if (carrying) {   // 두 손으로 작품을 들고 걷기
-    const walking = u.walkAmt > 0.35, bob = walking ? Math.abs(Math.sin(u.phase)) * 0.04 : 0, f = S.carry[walking ? Math.floor(u.phase / Math.PI) % S.carry.length : 0];
-    const scr = Math.sin(player.rotation.y) * CAM_RIGHT.x + Math.cos(player.rotation.y) * CAM_RIGHT.z;
-    showFrame(playerActor, f, p.x, p.z, scr > 0.3, bob); playerActor.mesh.rotation.z = walking ? Math.sin(u.phase) * 0.04 : 0; return;
-  }
-  playerActor.mesh.rotation.z = 0;
-  const a = screenAngle(player.rotation.y), aa = Math.abs(a), right = a > 0, walking = u.walkAmt > 0.35;
-  const step = Math.floor(u.phase / Math.PI * 1.0), bob = walking ? Math.abs(Math.sin(u.phase)) * 0.035 : 0;
-  let name, flip = false;
-  if (aa < 0.42) { name = walking ? S.walkFront[step % S.walkFront.length] : S.front; }
-  else if (aa < 1.95) { if (walking) { name = S.walk[step % S.walk.length]; } else name = aa < 1.2 ? S.q : S.side; flip = right; }
-  else if (aa < 2.75) { name = S.bq; flip = !right; }
-  else name = S.back;
-  showFrame(playerActor, name, p.x, p.z, flip, bob);
+  if (performance.now() < cheerUntil) { playerActor.blob.scale.set(1, 0.6, 1); showFrame(playerActor, S.cheer, p.x, p.z, false); return; }
+  drawChar(playerActor, PLAYER_KEY, p.x, p.z, player.rotation.y, u.walkAmt > 0.35, u.phase / 9, !!carrying);
 }
 
 /* 물레 차는 선생님 (포스터 캐릭터) — 3번 물레 자리, 물레실에서 계속 빚는 중 */
@@ -572,13 +576,12 @@ const TW = WHEELS[2]; TW.g.visible = false; TW.stool.visible = false;
 teacher.position.set(TW.g.position.x, 0, TW.g.position.z - 0.1);
 const teacherActor = makeActor();
 
-/* 공방 손님들: 방을 오가며 선반 구경 · 흙 반죽 · 유약 젓기 · 전시 구경
-   (포스터 컷이 한 장씩이라 걸을 땐 통통 튀고 좌우로 기우뚱, 일할 땐 몸을 흔드는 효과로 표현) */
+/* 공방 손님들(포스터 캐릭터): 그림이 한 장씩이라 보이는 데서는 걷지 않고,
+   각자 자리에서 구경·작업을 해요. 내가 다른 방에 있거나 물레를 차는 동안에만 자리를 옮겨요. */
 const NPCS = [
-  { name: 'N_beanie', room: 'studio', x: -3.0, z: 0.4 }, { name: 'N_cap', room: 'studio', x: -0.4, z: 2.6 },
-  { name: 'N_braid', room: 'studio', x: 1.9, z: 2.3 }, { name: 'N_smile', room: 'glaze', x: 1.0, z: 0.6 },
-  { name: 'N_glasses', room: 'gallery', x: 0.5, z: 2.4 }, { name: 'N_bowls', room: 'dry', x: 1.5, z: 2.2 }
-].map((v, i) => ({ ...v, actor: makeActor(), seed: i * 1.7, state: 'idle', until: performance.now() + 800 + i * 900, target: null, flip: false, walk: 0, phase: 0, stuck: 0, spot: null, obj: (() => { const g = new THREE.Group(); scene.add(g); return g; })() }));
+  { name: 'N_beanie', room: 'studio' }, { name: 'N_cap', room: 'studio' }, { name: 'N_braid', room: 'dry' },
+  { name: 'N_smile', room: 'glaze' }, { name: 'N_glasses', room: 'gallery' }, { name: 'N_bowls', room: 'kiln' }
+].map((v, i) => ({ ...v, actor: makeActor(), seed: i, state: 'do', until: 0, spot: null, x: 0, z: 0, obj: (() => { const g = new THREE.Group(); scene.add(g); return g; })() }));
 function npcBlocked(rid, x, z) {
   if (x < ROOM.x0 + 0.22 || x > ROOM.x1 - 0.22 || z < ROOM.z0 + 0.22 || z > ROOM.z1 - 0.22) return true;
   for (const c of ROOMS[rid].cols) {
@@ -587,64 +590,88 @@ function npcBlocked(rid, x, z) {
   }
   return false;
 }
-function spotTaken(n, sp) { return NPCS.some(o => o !== n && o.room === n.room && o.spot === sp); }
-function npcPlan(n, now) {
-  const R0 = ROOMS[n.room];
-  if (Math.random() < 0.22) {                                  // 다른 방으로 놀러 가기
-    const d = R0.doors[Math.floor(Math.random() * R0.doors.length)];
-    n.target = { x: d.x + 0.05, z: d.z, door: d }; n.state = 'walk'; n.spot = null; return;
-  }
-  const free = R0.spots.filter(sp => !spotTaken(n, sp));
-  const sp = free.length && Math.random() < 0.8 ? free[Math.floor(Math.random() * free.length)] : null;
-  if (sp) { n.target = { x: sp.x, z: sp.z }; n.spot = sp; }
-  else { n.spot = null; for (let k = 0; k < 20; k++) { const x = -4 + Math.random() * 8.5, z = -2.5 + Math.random() * 6; if (!npcBlocked(n.room, x, z)) { n.target = { x, z }; break; } } }
-  n.state = 'walk';
+function spotTaken(n, sp, room) { return NPCS.some(o => o !== n && o.room === room && o.spot === sp) || (partner.room === room && partner.spot === sp); }
+function npcRelocate(n, now) {          // 안 보일 때만: 다른 자리(가끔 다른 방)로 옮겨 둠
+  if (Math.random() < 0.3) n.room = ROOM_ORDER[Math.floor(Math.random() * ROOM_ORDER.length)];
+  const free = ROOMS[n.room].spots.filter(sp => !spotTaken(n, sp, n.room));
+  n.spot = free.length ? free[Math.floor(Math.random() * free.length)] : ROOMS[n.room].spots[0];
+  n.x = n.spot.x; n.z = n.spot.z; n.until = now + 9000 + Math.random() * 12000;
 }
-function npcStep(n, dt, now) {
-  if (n.state === 'idle' || n.state === 'do') {
-    if (now > n.until) npcPlan(n, now);
+NPCS.forEach(n => { const f = ROOMS[n.room].spots.filter(sp => !NPCS.some(o => o !== n && o.spot === sp)); n.spot = f[n.seed % f.length]; n.x = n.spot.x; n.z = n.spot.z; n.until = performance.now() + 8000 + n.seed * 3000; });
+const roomVisible = id => id === curRoom && !(window.HeukThrow && HeukThrow.active) && !fading;
+
+/* 단짝 캐릭터: 내가 고르지 않은 캐릭터(A↔B). 걷기·작업 컷이 있어서 보이는 데서도 걸어 다녀요.
+   B: 시유실 유약 작업대에서 붓으로 유약 바르기(GIF 12컷)  /  A: 작품을 들고 방을 오가며 구경(GIF 12컷) */
+let PARTNER_KEY = PLAYER_KEY === 'A' ? 'B' : 'A';
+const GLAZE_STATION = { room: 'glaze', x: 1.25, z: 1.55 };
+{ // 시유실 유약 작업대 (B가 앉아서 바르는 자리)
+  const keep = room; room = ROOMS.glaze.g; colliders = ROOMS.glaze.cols;
+  const g = new THREE.Group(); g.position.set(GLAZE_STATION.x, 0, GLAZE_STATION.z); room.add(g);
+  box(g, 0, 0.36, 0, 1.15, 0.72, 0.55, M(C.wood, 0.8)); box(g, 0, 0.735, 0, 1.25, 0.03, 0.62, M(C.woodDark, 0.7));
+  boxCol(GLAZE_STATION.x - 0.66, GLAZE_STATION.x + 0.66, GLAZE_STATION.z - 0.8, GLAZE_STATION.z + 0.34);
+  room = keep; colliders = STUDIO_COLS;
+}
+const partner = { key: PARTNER_KEY, actor: makeActor(), obj: (() => { const g = new THREE.Group(); scene.add(g); return g; })(),
+  room: PARTNER_KEY === 'B' ? 'glaze' : 'dry', x: 0, z: 0, yaw: 0, state: 'do', until: 0, t0: 0, walkT: 0, target: null, spot: null, stuck: 0 };
+const GLAZE_SPOT = { x: GLAZE_STATION.x, z: GLAZE_STATION.z - 0.55, kind: 'glazing', lines: ['청자유 발라보는 중', '붓을 한 방향으로!', '와, 색 예쁘게 나왔다!'] };
+function resetPartner() {     // 내가 고른 캐릭터가 바뀌면 단짝도 바뀜
+  PARTNER_KEY = PLAYER_KEY === 'A' ? 'B' : 'A'; const P = partner; P.key = PARTNER_KEY; P.state = 'do'; P.target = null; P.t0 = performance.now();
+  if (P.key === 'B') { P.room = 'glaze'; P.spot = GLAZE_SPOT; P.x = GLAZE_SPOT.x; P.z = GLAZE_SPOT.z; P.until = performance.now() + 30000; }
+  else { P.room = 'dry'; const sp = ROOMS.dry.spots[0]; P.spot = sp; P.x = sp.x; P.z = sp.z; P.yaw = sp.face; P.until = performance.now() + 6000; }
+}
+resetPartner();
+partner.obj.position.set(partner.x, 0, partner.z);
+function partnerPlan(now) {
+  const P = partner, R0 = ROOMS[P.room];
+  if (P.key === 'B' && P.room !== 'glaze' && Math.random() < 0.6) { const d = R0.doors.find(o => o.to === 'glaze') || R0.doors[0]; P.target = { x: d.x + 0.05, z: d.z, door: d }; }
+  else if (P.key === 'B' && P.room === 'glaze' && P.spot !== GLAZE_SPOT && Math.random() < 0.7) { P.spot = GLAZE_SPOT; P.target = { x: GLAZE_SPOT.x, z: GLAZE_SPOT.z }; }
+  else if (Math.random() < 0.3) { const d = R0.doors[Math.floor(Math.random() * R0.doors.length)]; P.target = { x: d.x + 0.05, z: d.z, door: d }; P.spot = null; }
+  else { const free = R0.spots.filter(sp => !spotTaken(P, sp, P.room)); const sp = free[Math.floor(Math.random() * free.length)] || R0.spots[0]; P.spot = sp; P.target = { x: sp.x, z: sp.z }; }
+  P.state = 'walk'; P.stuck = 0;
+}
+function partnerStep(dt, now) {
+  const P = partner;
+  if (P.state === 'do') { if (now > P.until) partnerPlan(now); return; }
+  const t = P.target, dx = t.x - P.x, dz = t.z - P.z, d = Math.hypot(dx, dz);
+  if (d < 0.06) {
+    if (t.door) { const to = t.door.to, back = ROOMS[to].doors.find(o => o.to === P.room) || ROOMS[to].doors[0]; P.room = to; P.x = back.x + 0.6; P.z = back.z; P.yaw = Math.PI / 2; P.state = 'do'; P.until = now + 300; P.spot = null; return; }
+    P.state = 'do'; P.t0 = now; P.until = now + (P.spot === GLAZE_SPOT ? 24000 + Math.random() * 12000 : 4000 + Math.random() * 5000);
+    if (P.spot && P.spot.face !== undefined) P.yaw = P.spot.face;
+    if (P.spot && roomVisible(P.room) && Math.random() < 0.6) queueLine(P, P.spot.lines[Math.floor(Math.random() * P.spot.lines.length)]);
     return;
   }
-  // 걷기
-  const t = n.target; if (!t) { n.state = 'idle'; n.until = now + 1000; return; }
-  const dx = t.x - n.x, dz = t.z - n.z, d = Math.hypot(dx, dz);
-  if (d < 0.08) {
-    if (t.door) {                                              // 문을 지나 다른 방으로
-      const to = t.door.to, back = ROOMS[to].doors.find(o => o.to === n.room) || ROOMS[to].doors[0];
-      n.room = to; n.x = back.x + 0.7; n.z = back.z; n.target = null; n.state = 'idle'; n.until = now + 600 + Math.random() * 1200; return;
-    }
-    n.state = n.spot ? 'do' : 'idle'; n.until = now + (n.spot ? 6000 + Math.random() * 7000 : 1500 + Math.random() * 2500);
-    if (n.spot && n.room === curRoom && Math.random() < 0.55) queueLine(n, n.spot.lines[Math.floor(Math.random() * n.spot.lines.length)]);
-    return;
-  }
-  const sp = 1.15 * dt, base = Math.atan2(dx, dz);
-  let moved = false;
-  for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5]) {
+  const sp = 1.1 * dt, base = Math.atan2(dx, dz); let moved = false;
+  for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6]) {
     const a = base + off, mx = Math.sin(a) * sp, mz = Math.cos(a) * sp;
-    if (!npcBlocked(n.room, n.x + mx, n.z + mz) || d < 0.45) { n.x += mx; n.z += mz; moved = true; const scr = mx * CAM_RIGHT.x + mz * CAM_RIGHT.z; if (Math.abs(scr) > 1e-4) n.flip = scr > 0; break; }
+    if (!npcBlocked(P.room, P.x + mx, P.z + mz) || d < 0.5) { P.x += mx; P.z += mz; let dy = a - P.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); P.yaw += dy * Math.min(1, dt * 5); moved = true; break; }   // 방향은 천천히 돌려서 컷이 깜빡이지 않게
   }
-  n.stuck = moved ? 0 : n.stuck + dt; n.phase += dt * 9;
-  if (n.stuck > 1.5) { n.state = 'idle'; n.until = now + 400; n.stuck = 0; }
+  P.walkT += dt; P.stuck = moved ? 0 : P.stuck + dt;
+  if (P.stuck > 1.2) { P.x = t.x; P.z = t.z; }                   // 끼면 목표로 (드묾)
 }
+
 function drawNPCs(now, dt) {
   const inStudio = curRoom === 'studio';
   teacherActor.mesh.visible = teacherActor.blob.visible = inStudio;
-  if (inStudio) {     // 선생님: 물레 차며 빚는 중 (몸을 살짝 앞뒤로)
-    showFrame(teacherActor, 'N_teacher', teacher.position.x, teacher.position.z, false, 0, 1 + Math.sin(now * 0.006) * 0.008);
-    teacherActor.mesh.rotation.z = Math.sin(now * 0.004) * 0.025; teacherActor.blob.scale.set(1.8, 0.9, 1);
-  }
+  if (inStudio) { showFrame(teacherActor, 'N_teacher', teacher.position.x, teacher.position.z, false); teacherActor.mesh.rotation.z = 0; teacherActor.blob.scale.set(1.8, 0.9, 1); }
   for (const n of NPCS) {
-    npcStep(n, dt, now);
-    const vis = n.room === curRoom; n.actor.mesh.visible = n.actor.blob.visible = vis; n.obj.position.set(n.x, 0, n.z);
-    if (!vis) continue;
-    let lift = 0, squash = 1, tilt = 0, flip = n.flip;
-    if (n.state === 'walk') { lift = Math.abs(Math.sin(n.phase)) * 0.06; tilt = Math.sin(n.phase) * 0.07; squash = 1 - Math.abs(Math.cos(n.phase)) * 0.025; }
-    else if (n.state === 'do' && n.spot.kind === 'work') { tilt = Math.sin(now * 0.009 + n.seed) * 0.06; squash = 1 + Math.sin(now * 0.018 + n.seed) * 0.02; lift = Math.max(0, Math.sin(now * 0.009 + n.seed)) * 0.015; }
-    else if (n.state === 'do') { tilt = Math.sin(now * 0.0025 + n.seed) * 0.035; flip = screenAngle(n.spot.face) > 0; }   // 구경: 고개 갸웃
-    else squash = 1 + Math.sin(now * 0.002 + n.seed) * 0.01;
-    showFrame(n.actor, n.name, n.x, n.z, flip, lift, squash);
-    n.actor.mesh.rotation.z = tilt;
+    const vis = roomVisible(n.room);
+    if (!vis && now > n.until) npcRelocate(n, now);
+    const show = n.room === curRoom; n.actor.mesh.visible = n.actor.blob.visible = show; n.obj.position.set(n.x, 0, n.z);
+    if (!show) continue;
+    n.actor.mesh.rotation.z = 0;
+    showFrame(n.actor, n.name, n.x, n.z, n.spot && n.spot.face !== undefined ? screenAngle(n.spot.face) > 0 : false);
   }
+  // 단짝
+  const P = partner; partnerStep(dt, now); P.obj.position.set(P.x, 0, P.z);
+  const pv = P.room === curRoom; P.actor.mesh.visible = P.actor.blob.visible = pv;
+  if (!pv) return;
+  if (P.state === 'do' && P.spot === GLAZE_SPOT) {         // 유약 바르기 12컷 + 마지막 컷 잠깐 멈춤
+    const k = Math.floor((now - P.t0) / 1000 * FPS) % 16, f = 'B_gl' + Math.min(11, k);
+    const fwd = V(ISO.x, 0, ISO.z).normalize().multiplyScalar(0.36);   // 작업대 앞면 바로 앞: 그림 속 나무 판이 작업대 윗면에 겹치게
+    showFrame(P.actor, f, GLAZE_STATION.x + fwd.x, GLAZE_STATION.z + fwd.z, false, 0.66); P.actor.blob.visible = false; P.actor.mesh.rotation.z = 0;
+    return;
+  }
+  drawChar(P.actor, P.key, P.x, P.z, P.yaw, P.state === 'walk', P.walkT, P.key === 'A');
 }
 
 function seatOn(ch, w) {
@@ -754,6 +781,7 @@ const pick = $('#pick');
 function openPick() { pick.hidden = false; }
 pick.querySelectorAll('.who').forEach(b => b.onclick = () => {
   PLAYER_KEY = b.dataset.k; try { localStorage.setItem('heukmaru-char', PLAYER_KEY); } catch {}
+  resetPartner();
   pick.hidden = true; setHint(sitting ? '물레에 앉아 있어요' : '바닥을 누르거나 WASD로 걸어요');
 });
 $('#changeChar').onclick = openPick;
@@ -771,7 +799,7 @@ function say(obj, text, h = 1.55, ms = 3200) { speaker = obj; speakerH = h; bubb
 function queueLine(n, text) { if (performance.now() > bubbleUntil) say(n.obj, text); }
 function updateBubble(now) {
   if (now > nextBubble) {
-    const here = NPCS.filter(n => n.room === curRoom);
+    const here = NPCS.filter(n => n.room === curRoom).concat(partner.room === curRoom && partner.spot ? [partner] : []);
     if (curRoom === 'studio' && Math.random() < 0.4) say(teacher, TEACHER_LINES[tIdx++ % TEACHER_LINES.length], 1.25);
     else if (here.length) { const n = here[Math.floor(Math.random() * here.length)]; say(n.obj, n.spot ? n.spot.lines[Math.floor(Math.random() * n.spot.lines.length)] : ['흙 묻었어요 ㅎㅎ', '여기 너무 좋다', '다음엔 뭐 만들지?'][Math.floor(Math.random() * 3)]); }
     else nextBubble = now + 3000;
@@ -964,5 +992,5 @@ renderMyPieces(); addEventListener('heukmaru-pieces', renderMyPieces);
 // 들고 있던 작품이 있으면 다시 들기(새로고침 대비)
 { const c = loadPieces().find(o => o.place === 'carry'); if (c) carrying = c; }
 renderGallery(); applyRoom('studio', null); player.position.set(-2.6, 0, 2.4); doorLock = null; setHint('바닥을 누르거나 WASD로 걸어요');
-window.__heukmaru = { camera, goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
+window.__heukmaru = { camera, get partner(){return partner}, GLAZE_SPOT: (typeof GLAZE_SPOT!=='undefined'?GLAZE_SPOT:null), goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
 })();
