@@ -65,7 +65,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:#2b2724;font-family:"P
 .dock:not(:has(button:not([hidden]))){display:none}
 /* 아이폰 노치·앱 상단 바 아래로 내리기 */
 .top{padding-top:calc(14px + env(safe-area-inset-top))}
-.rooms{top:calc(12px + env(safe-area-inset-top))}
+@media (min-width:701px){.rooms{top:calc(12px + env(safe-area-inset-top))}}
+@media (max-width:700px){.rooms{top:auto!important;bottom:calc(92px + env(safe-area-inset-bottom))}}
 #throwMode .tw-chips{margin-top:env(safe-area-inset-top)}
 #throwMode .tw-dock{margin-bottom:env(safe-area-inset-bottom)}
 </style>
