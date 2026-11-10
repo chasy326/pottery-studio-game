@@ -1,0 +1,12 @@
+걷기 8컷 시트 만들기 (Nano Banana Pro / Gemini 이미지 생성 등)
+- 참고 이미지: 같은 폴더의 *_in.png 중 하나를 첨부
+- 비율 21:9 (가로로 긴 이미지)
+
+[옆 걷기] 참고: B_side_in.png
+Game sprite sheet of the exact same character from the reference image: a full walk cycle of 8 frames in one single horizontal row, side view, the character faces exactly the same direction as in the reference image in every frame. Frames evenly spaced with clear gaps, every frame the same size and scale, feet on the same baseline, character stays in place (walking in place). Natural walk: legs alternate stepping (contact, down, passing, up poses), arms swing opposite to legs, head bobs slightly. Keep the character design identical in every frame. Pure plain white background, no shadows, no text, no labels.
+
+[3/4 앞 걷기] 참고: B_q_in.png  → 위 문장에서 "side view"를
+"three-quarter FRONT view (we see the face and front of the body, turned about 45 degrees), walking toward the viewer diagonally" 로 바꿔요.
+
+[3/4 뒤 걷기] 참고: B_bq_in.png 또는 A_bq_in.png → "side view"를
+"three-quarter BACK view (we see the back of the head and the back of the body, turned about 45 degrees, walking away from the viewer diagonally)" 로 바꿔요.

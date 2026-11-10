@@ -502,15 +502,15 @@ function ik(a, c, l1, l2, pole) {          // 두 마디 IK → [팔꿈치/무�
 }
 
 /* ---------- 그림 캐릭터 (직접 만든 캐릭터 시트에서 오려낸 컷) ---------- */
-const SPR = {"A_back": [95, 210], "A_big": [258, 517], "A_bowl1": [67, 123], "A_bowl2": [65, 124], "A_bq": [85, 212], "A_cheer": [83, 125], "A_front": [95, 209], "A_q": [89, 210], "A_side": [88, 212], "A_w1": [64, 114], "A_w2": [58, 110], "A_w3": [58, 110], "A_w4": [59, 110], "A_wheel": [77, 120], "B_back": [91, 215], "B_big": [201, 519], "B_bowl": [56, 119], "B_bq": [95, 214], "B_cheer": [86, 123], "B_f1": [58, 121], "B_front": [93, 216], "B_q": [91, 216], "B_side": [103, 215], "B_w1": [62, 112], "B_w2": [61, 115], "B_w3": [56, 117], "B_x1": [66, 122], "B_x2": [67, 122], "B_x3": [69, 121], "N_beanie": [144, 346], "N_bowls": [182, 340], "N_braid": [204, 335], "N_cap": [160, 336], "N_glasses": [162, 326], "N_smile": [175, 337], "N_teacher": [198, 321], "A_cw0": [180, 340], "A_cw1": [180, 340], "A_cw2": [180, 340], "A_cw3": [180, 340], "A_cw4": [180, 340], "A_cw5": [180, 340], "A_cw6": [180, 340], "A_cw7": [180, 340], "A_cw8": [180, 340], "A_cw9": [180, 340], "A_cw10": [180, 340], "A_cw11": [180, 340], "B_gl0": [285, 349], "B_gl1": [285, 349], "B_gl2": [285, 349], "B_gl3": [285, 349], "B_gl4": [285, 349], "B_gl5": [285, 349], "B_gl6": [285, 349], "B_gl7": [285, 349], "B_gl8": [285, 349], "B_gl9": [285, 349], "B_gl10": [285, 349], "B_gl11": [285, 349]}
+const SPR = {"A_back": [95, 210], "A_big": [258, 517], "A_bowl1": [67, 123], "A_bowl2": [65, 124], "A_bq": [85, 212], "A_cheer": [83, 125], "A_front": [95, 209], "A_q": [89, 210], "A_side": [88, 212], "A_w1": [64, 114], "A_w2": [58, 110], "A_w3": [58, 110], "A_w4": [59, 110], "A_wheel": [77, 120], "B_back": [91, 215], "B_big": [201, 519], "B_bowl": [56, 119], "B_bq": [95, 214], "B_cheer": [86, 123], "B_f1": [58, 121], "B_front": [93, 216], "B_q": [91, 216], "B_side": [103, 215], "B_w1": [62, 112], "B_w2": [61, 115], "B_w3": [56, 117], "B_x1": [66, 122], "B_x2": [67, 122], "B_x3": [69, 121], "N_beanie": [144, 346], "N_bowls": [182, 340], "N_braid": [204, 335], "N_cap": [160, 336], "N_glasses": [162, 326], "N_smile": [175, 337], "N_teacher": [198, 321], "A_ws0": [220, 425], "A_ws1": [220, 425], "A_ws2": [220, 425], "A_ws3": [220, 425], "A_ws4": [220, 425], "A_ws5": [220, 425], "A_ws6": [220, 425], "A_ws7": [220, 425], "A_wq0": [212, 434], "A_wq1": [212, 434], "A_wq2": [212, 434], "A_wq3": [212, 434], "A_wq4": [212, 434], "A_wq5": [212, 434], "A_wq6": [212, 434], "A_wq7": [212, 434], "A_cw0": [180, 340], "A_cw1": [180, 340], "A_cw2": [180, 340], "A_cw3": [180, 340], "A_cw4": [180, 340], "A_cw5": [180, 340], "A_cw6": [180, 340], "A_cw7": [180, 340], "A_cw8": [180, 340], "A_cw9": [180, 340], "A_cw10": [180, 340], "A_cw11": [180, 340], "B_gl0": [285, 349], "B_gl1": [285, 349], "B_gl2": [285, 349], "B_gl3": [285, 349], "B_gl4": [285, 349], "B_gl5": [285, 349], "B_gl6": [285, 349], "B_gl7": [285, 349], "B_gl8": [285, 349], "B_gl9": [285, 349], "B_gl10": [285, 349], "B_gl11": [285, 349]}
 const texLoader = new THREE.TextureLoader(), texCache = {};
 function tex(name) { if (!texCache[name]) { const t = texLoader.load('/chars/' + name + '.png'); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; texCache[name] = t; } return texCache[name]; }
 Object.keys(SPR).forEach(tex);                                  // 미리 불러오기
 const CAM_YAW = Math.atan2(ISO.x, ISO.z);
 const ELEV_FIX = 1 / Math.hypot(ISO.x, ISO.z);                   // 세운 판을 위에서 볼 때 줄어드는 높이 보정
 const CHAR_H = 1.3;
-const K = { sheet: CHAR_H / 211, small: CHAR_H / 112, poster: CHAR_H / 336, cw: CHAR_H / 330, gl: 0.72 / 230 };
-const kOf = n => n.startsWith('N_') ? K.poster : n.startsWith('A_cw') ? K.cw : n.startsWith('B_gl') ? K.gl : (/_(front|q|side|back|bq)$/.test(n) ? K.sheet : K.small);
+const K = { sheet: CHAR_H / 211, small: CHAR_H / 112, poster: CHAR_H / 336, cw: CHAR_H / 330, gl: 0.72 / 230, ws: 0.487 / 144.5, wq: 0.511 / 155 };
+const kOf = n => n.startsWith('N_') ? K.poster : n.startsWith('A_cw') ? K.cw : n.startsWith('A_ws') ? K.ws : n.startsWith('A_wq') ? K.wq : n.startsWith('B_gl') ? K.gl : (/_(front|q|side|back|bq)$/.test(n) ? K.sheet : K.small);
 const blobGeo = new THREE.CircleGeometry(0.26, 24), blobMat = new THREE.MeshBasicMaterial({ color: '#2a1f18', transparent: true, opacity: 0.22, depthWrite: false });
 function makeActor() {
   const geo = new THREE.PlaneGeometry(1, 1); geo.translate(0, 0.5, 0);
@@ -532,7 +532,7 @@ function showFrame(a, name, x, z, flip = false, lift = 0, squash = 1) {
 const CAM_RIGHT = V(Math.cos(CAM_YAW), 0, -Math.sin(CAM_YAW)), TO_CAM = V(Math.sin(CAM_YAW), 0, Math.cos(CAM_YAW));
 function screenAngle(yaw) { const d = V(Math.sin(yaw), 0, Math.cos(yaw)); return Math.atan2(d.dot(CAM_RIGHT), d.dot(TO_CAM)); }
 const SET = {
-  A: { front: 'A_front', q: 'A_q', side: 'A_side', bq: 'A_bq', back: 'A_back', walk: ['A_w2', 'A_w3', 'A_w4', 'A_w3'], walkFront: ['A_w1', 'A_front'], sit: ['A_wheel'], big: 'A_big', cheer: 'A_cheer', carry: ['A_bowl1', 'A_bowl2'], carryClip: { front: ['A_cw0', 'A_cw1', 'A_cw2', 'A_cw3'], q: ['A_cw4', 'A_cw5', 'A_cw6', 'A_cw7'], side: ['A_cw8', 'A_cw9', 'A_cw10', 'A_cw11'], stand: 'A_cw0', standQ: 'A_cw4', standSide: 'A_cw8' } },
+  A: { front: 'A_front', q: 'A_q', side: 'A_side', bq: 'A_bq', back: 'A_back', walk: ['A_w2', 'A_w3', 'A_w4', 'A_w3'], walkFront: ['A_w1', 'A_front'], sit: ['A_wheel'], big: 'A_big', cheer: 'A_cheer', carry: ['A_bowl1', 'A_bowl2'], walkClip: { side: [0, 1, 2, 3, 4, 5, 6, 7].map(i => 'A_ws' + i), q: [0, 1, 2, 3, 4, 5, 6, 7].map(i => 'A_wq' + i) }, carryClip: { front: ['A_cw0', 'A_cw1', 'A_cw2', 'A_cw3'], q: ['A_cw4', 'A_cw5', 'A_cw6', 'A_cw7'], side: ['A_cw8', 'A_cw9', 'A_cw10', 'A_cw11'], stand: 'A_cw0', standQ: 'A_cw4', standSide: 'A_cw8' } },
   B: { front: 'B_front', q: 'B_q', side: 'B_side', bq: 'B_bq', back: 'B_back', walk: ['B_w1', 'B_w2', 'B_w3', 'B_w2'], walkFront: ['B_front'], sit: ['B_x1', 'B_x2', 'B_x3', 'B_x2'], big: 'B_big', cheer: 'B_cheer', carry: ['B_bowl'] }
 };
 let PLAYER_KEY = 'A';
@@ -543,10 +543,10 @@ player.position.set(-2.6, 0, 2.4); player.rotation.y = Math.PI * 0.25;
 player.userData = { pose: 'stand', walkAmt: 0, phase: 0 };
 const playerActor = makeActor();
 /* 캐릭터 그리기: 몸을 기울이거나 튕기지 않고, 그림 컷만 바꿔서 움직임을 만든다 (초당 8컷) */
-const FPS = 8;
+const FPS = 10;   // 8컷 걷기 한 바퀴 0.8초
 function viewOf(aa) { return aa < 0.42 ? 'front' : aa < 1.2 ? 'q' : aa < 1.95 ? 'side' : aa < 2.75 ? 'bq' : 'back'; }
-function drawChar(actor, key, x, z, yaw, walking, t, carry) {
-  const S = SET[key], a = screenAngle(yaw), aa = Math.abs(a), step = Math.floor(t * FPS), now = performance.now();
+function drawChar(actor, key, x, z, yaw, walking, t, carry, fps = FPS) {
+  const S = SET[key], a = screenAngle(yaw), aa = Math.abs(a), step = Math.floor(t * fps), now = performance.now();
   // 방향 그림은 새 방향이 0.15초 넘게 유지될 때만 바꿈 (장애물 피할 때 깜빡임 방지)
   const v = viewOf(aa), r = a > 0;
   if (!actor.view) { actor.view = v; actor.right = r; }
@@ -561,6 +561,10 @@ function drawChar(actor, key, x, z, yaw, walking, t, carry) {
     else if (view === 'q') { name = walking ? C.q[step % 4] : C.standQ; flip = !right; }
     else { name = walking ? C.side[step % 4] : C.standSide; flip = !right; }
   } else if (carry) { name = S.carry[0]; }
+  else if (walking && S.walkClip) {                   // AI로 만든 8컷 걷기 (원본은 오른쪽을 봄): 정면·3/4 → 3/4 앞 걷기, 옆·뒤 → 옆 걷기
+    const clip = view === 'front' || view === 'q' ? S.walkClip.q : S.walkClip.side;
+    name = clip[step % clip.length]; flip = !right;
+  }
   else if (walking) {                                 // 걷기: 정면 컷 / 그 외(3/4·옆·뒤)는 옆 걷기 컷 — 뒤로 걷는 컷이 없어서 미끄러지지 않게
     if (view === 'front') name = S.walkFront[step % S.walkFront.length];
     else { name = S.walk[step % S.walk.length]; flip = right; }
@@ -581,7 +585,7 @@ function drawPlayer(now) {
     return;
   }
   if (performance.now() < cheerUntil) { playerActor.blob.scale.set(1, 0.6, 1); showFrame(playerActor, S.cheer, p.x, p.z, false); return; }
-  drawChar(playerActor, PLAYER_KEY, p.x, p.z, player.rotation.y, u.walkAmt > 0.35, u.phase / 9, !!carrying);
+  drawChar(playerActor, PLAYER_KEY, p.x, p.z, player.rotation.y, u.walkAmt > 0.35, u.phase / 9, !!carrying, 13);   // 이동 속도에 맞춰 발이 미끄러지지 않게
 }
 
 /* 물레 차는 선생님 (포스터 캐릭터) — 3번 물레 자리, 물레실에서 계속 빚는 중 */
@@ -757,7 +761,7 @@ function findPath(fx, fz, tx, tz) {
 function walkTo(x, z) { route = findPath(player.position.x, player.position.z, x, z); goal = route.shift(); }
 function stepMove(dx, dz, dt) {
   const len = Math.hypot(dx, dz); if (len < 1e-4) return false;
-  const sp = 2.2 * dt, p = player.position, base = Math.atan2(dx, dz);
+  const sp = 1.7 * dt, p = player.position, base = Math.atan2(dx, dz);
   let moved = false, used = base;
   // 막히면 좌우로 조금씩 꺾어 장애물을 돌아감
   for (const off of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.57, -1.57]) {
