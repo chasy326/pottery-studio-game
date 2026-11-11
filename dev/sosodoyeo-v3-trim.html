@@ -745,6 +745,12 @@ requestAnimationFrame(loop);
 #sosoKiln .kn-bar{width:240px;height:12px;border-radius:6px;background:#e8d3b0;border:2px solid #c9a978;overflow:hidden}
 #sosoKiln .kn-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f2b04a,#e2553f)}
 #sosoKiln .kn-temp-big{font-size:26px;background:#fffaf0cc;border-radius:12px;padding:0 10px}
+#sosoTrimUR{position:absolute;z-index:46;left:10px;top:72px;display:none;gap:8px}
+#sosoTrimUR.show{display:flex}
+#sosoTrimUR .tu-b{all:unset;box-sizing:border-box;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 30%,#5aa866,#2e6b38 70%);border:2px solid #f8f0dc;box-shadow:0 4px 0 #23432d;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#sosoTrimUR .tu-b svg{width:30px;height:30px}
+#sosoTrimUR .tu-b.off{background:radial-gradient(circle at 35% 30%,#b9c0b8,#8d978d 70%);box-shadow:0 4px 0 #6f776f;opacity:.75}
+#sosoTrimUR .tu-b:active{transform:translateY(2px);box-shadow:0 2px 0 #23432d}
 </style>
 <script id="soso-trim">
 (function(){
@@ -810,8 +816,8 @@ function buildModel(){
     if(p.nx<-.2)lim=Math.min(lim,Math.max(0,(p.r-.03)/(-p.nx)));
     p.lim=lim;});
   M={pts:pts,inner:inner,H:H,f:f,w:w,r:r,r0:Math.max(.05,r[0]),hollow:isH,sTot:sTot,ds:sTot/n};
-  // only the lower part is carvable comfortably: fade the limit above 55% height
-  pts.forEach(function(p){if(p.y>H*.55)p.lim*=clamp(1-(p.y-H*.55)/(H*.2),0,1);});
+  // carvable down to just above the rim (keep the last few % so the lip stays whole)
+  pts.forEach(function(p){if(p.y>H*.9)p.lim*=clamp(1-(p.y-H*.9)/(H*.07),0,1);});
 }
 function profilePoints(){var V=function(x,y){return new THREE.Vector2(x,y);},out=[];
   M.pts.forEach(function(p){out.push(V(Math.max(.006,p.r+p.nx*p.d),Math.max(-.001,p.y+p.ny*p.d)));});
@@ -826,7 +832,7 @@ function rebuild(force){if(!M||!potMesh3)return;var t=now();if(!force&&t-lastBui
   var g=new THREE.LatheGeometry(profilePoints(),96),np=M.pts.length+M.inner.length+(M.hollow?0:1),cnt=g.attributes.position.count,col=new Float32Array(cnt*3);
   var tintOn=TR.guideOn&&TR.phase==='carve'&&M.need,tint=new THREE.Color(0xf08a3c),base=new THREE.Color(TR.dryColor||clayBase()),unc=base.clone().multiplyScalar(.78).lerp(new THREE.Color(0x8f7d6a),.18),fresh=base.clone().lerp(new THREE.Color(0xfff4df),.62),edge=base.clone().multiplyScalar(.55).lerp(new THREE.Color(0x5a3418),.25),c=new THREE.Color(),NP=M.pts.length,slope=new Float32Array(NP);for(var q=1;q<NP-1;q++)slope[q]=Math.abs(M.pts[q+1].d-M.pts[q-1].d)/(2*M.ds);
   for(var v=0;v<cnt;v++){var j=v%np,d=j<M.pts.length?M.pts[j].d:0,k=clamp(d/.004,0,1),stripe=j<NP?(Math.sin(j*1.9)*.5+.5)*.09*k:0,eg=j<NP?clamp(slope[j]*1.4,0,.75):0;c.copy(unc).lerp(fresh,k);c.multiplyScalar(1-stripe);c.lerp(edge,eg);if(tintOn&&j<NP){var rem=M.need[j]-d;if(rem>.002)c.lerp(tint,clamp(rem/.015,0,1)*.42);}col[v*3]=c.r;col[v*3+1]=c.g;col[v*3+2]=c.b;}
-  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));try{updUR();}catch(e){}
   var old=potMesh3.geometry;potMesh3.geometry=g;if(old)old.dispose();}
 
 /* ---------- scene helpers ---------- */
@@ -927,7 +933,17 @@ function buildUI(){var mode=$('makeMode');if(!mode)return;
     ui.pick.querySelectorAll('.fp-opt').forEach(function(b){b.addEventListener('click',function(){TR.foot=b.dataset.foot;syncUI();});});
     $('sosoFootGo').addEventListener('click',function(){ui.pick.classList.remove('show');buildGuide();TR.phase='carve';TR.zoom=1;caption('주황색 부분을 깎아요',2600);syncUI();rebuild(true);});}
   if(!ui.res){ui.res=el('div','sosoTrimResult','');mode.appendChild(ui.res);}
+  if(!ui.ur){ui.ur=el('div','sosoTrimUR','','<button type="button" class="tu-b" data-u aria-label="되돌리기"><svg viewBox="0 0 24 24"><path d="M9 7H5V3" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 7.2A8 8 0 1 1 6 17" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg></button><button type="button" class="tu-b" data-r aria-label="다시 하기"><svg viewBox="0 0 24 24"><path d="M15 7h4V3" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.4 7.2A8 8 0 1 0 18 17" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/></svg></button>');mode.appendChild(ui.ur);
+    ['pointerdown','touchstart','mousedown'].forEach(function(ev){ui.ur.addEventListener(ev,function(e){e.stopPropagation();},{passive:true});});
+    ui.ur.querySelector('[data-u]').addEventListener('click',function(e){e.stopPropagation();undoCarve();});ui.ur.querySelector('[data-r]').addEventListener('click',function(e){e.stopPropagation();redoCarve();});}
 }
+function updUR(){if(!ui.ur)return;ui.ur.querySelectorAll('.soso-candy').forEach(function(b){b.className=b.className.split(/\s+/).filter(function(c){return c.indexOf('soso-candy')!==0&&c!=='soso-round';}).join(' ');});var onC=TR.active&&TR.phase==='carve';ui.ur.classList.toggle('show',onC);if(!onC||!M)return;var hasU=(TR.undo||[]).some(function(a){return !sameD(a);});ui.ur.querySelector('[data-u]').classList.toggle('off',!hasU);ui.ur.querySelector('[data-r]').classList.toggle('off',!(TR.redo||[]).length);}
+function snapD(){return M.pts.map(function(p){return p.d;});}
+function sameD(a){for(var i=0;i<a.length;i++)if(Math.abs(a[i]-M.pts[i].d)>1e-6)return false;return true;}
+function pushUndo(){if(!M)return;TR.undo=TR.undo||[];TR.redo=[];var u=TR.undo;if(u.length&&sameD(u[u.length-1]))return;u.push(snapD());if(u.length>40)u.shift();syncUI();}
+function applyD(a){M.pts.forEach(function(p,i){p.d=a[i]||0;});TR.doneNote=false;rebuild(true);}
+function undoCarve(){var u=TR.undo||[];while(u.length&&sameD(u[u.length-1]))u.pop();if(!u.length){syncUI();return;}TR.redo=TR.redo||[];TR.redo.push(snapD());applyD(u.pop());blip(420,.06,.08,'triangle');syncUI();}
+function redoCarve(){var r=TR.redo||[];if(!r.length)return;TR.undo=TR.undo||[];TR.undo.push(snapD());applyD(r.pop());blip(560,.06,.08,'triangle');syncUI();}
 function footSvg(k){var clayC='#d9b38c',st='#7a5434';var body='M14 6 h52 v6 h-5 v18';var p;
   if(k==='flat')p='M10 8 H70 V14 Q70 36 64 40 H16 Q10 36 10 14 Z M18 14 H62 V30 Q62 34 58 34 H22 Q18 34 18 30 Z';
   else if(k==='inner')p='M10 8 H70 V14 Q70 32 62 34 V42 H54 V38 H26 V42 H18 V34 Q10 32 10 14 Z M18 14 H62 V28 Q62 31 58 31 H22 Q18 31 18 28 Z';
@@ -938,12 +954,13 @@ function caption(t,ms){if(!ui.cap)return;ui.cap.textContent=t||'';ui.cap.classLi
 var bubT=0;
 function bubble(){if(!ui.bub)return;var t=now();if(t-bubT<3200)return;bubT=t;ui.bub.classList.remove('show');void ui.bub.offsetWidth;ui.bub.classList.add('show');clearTimeout(bubble.t);bubble.t=setTimeout(function(){ui.bub.classList.remove('show');},3100);}
 var SPEEDN=['','느리게','천천히','보통','빠르게','아주 빠르게'];
-function unskin(){['sosoTrimPanel','sosoFootPick','sosoTrimResult'].forEach(function(id){var r=$(id);if(r)r.querySelectorAll('button.soso-candy').forEach(strip);});if(ui.guideBtn&&ui.guideBtn.classList.contains('soso-candy'))strip(ui.guideBtn);function strip(b){b.className=b.className.split(/\s+/).filter(function(c){return c.indexOf('soso-candy')!==0&&c!=='soso-round';}).join(' ');}}
+function unskin(){['sosoTrimPanel','sosoFootPick','sosoTrimResult','sosoTrimUR'].forEach(function(id){var r=$(id);if(r)r.querySelectorAll('button.soso-candy').forEach(strip);});if(ui.guideBtn&&ui.guideBtn.classList.contains('soso-candy'))strip(ui.guideBtn);function strip(b){b.className=b.className.split(/\s+/).filter(function(c){return c.indexOf('soso-candy')!==0&&c!=='soso-round';}).join(' ');}}
 function syncUI(){var mode=$('makeMode');if(!mode)return;mode.classList.toggle('soso-trim',TR.active);unskin();var gt=$('guideToggle');if(gt){if(TR.active)gt.style.setProperty('display','none','important');else gt.style.removeProperty('display');}
   if(ui.panel){ui.panel.classList.toggle('show',TR.active&&(TR.phase==='carve'));ui.panel.classList.toggle('locked',TR.locked);
     ui.panel.querySelectorAll('.tp-tool').forEach(function(b){b.classList.toggle('on',b.dataset.tool===TR.tool);b.setAttribute('aria-pressed',String(b.dataset.tool===TR.tool));});
     var v=speedVal(),s=$('sosoTrimSpeed');if(s&&+s.value!==v)s.value=v;var sn=$('sosoTrimSpeedName');if(sn)sn.textContent=SPEEDN[v]||'보통';
     var d=$('sosoTrimDone');if(d)d.classList.toggle('pulse',TR.locked||!!TR.doneNote);}
+  updUR();
   if(ui.pick)ui.pick.querySelectorAll('.fp-opt').forEach(function(b){b.classList.toggle('on',b.dataset.foot===TR.foot);});
   if(ui.guideBtn){ui.guideBtn.hidden=!(TR.active&&TR.phase==='carve');ui.guideBtn.classList.toggle('off',!TR.guideOn);ui.guideBtn.textContent=TR.guideOn?'가이드 켜짐':'가이드 꺼짐';}
   if(guideGrp){guideGrp.visible=TR.active&&TR.guideOn&&(TR.phase==='carve');if(potGroup3)guideGrp.position.copy(potGroup3.position);}
@@ -957,7 +974,7 @@ function hookOnce(){if(_render||!renderer3)return;
   _render=renderer3.render.bind(renderer3);
   renderer3.render=function(sc,cam){if(TR.active){try{frame();}catch(e){console.error(e);}}return _render(sc,cam);};}
 function start(){if(TR.active||!window.cs3||!potGroup3||!potMesh3)return;
-  hookOnce();TR.active=true;TR.phase='dry';TR.t0=now();TR.zoom=0;TR.carveSec=0;TR.locked=false;TR.offset=new THREE.Vector3(.3,0,0);TR.centered=false;TR.spin=0;TR.speed=0;TR.shake=0;TR.zoomF=1;TR.doneNote=false;TR.everDragged=false;TR.guideOn=true;
+  hookOnce();TR.active=true;TR.undo=[];TR.redo=[];TR.phase='dry';TR.t0=now();TR.zoom=0;TR.carveSec=0;TR.locked=false;TR.offset=new THREE.Vector3(.3,0,0);TR.centered=false;TR.spin=0;TR.speed=0;TR.shake=0;TR.zoomF=1;TR.doneNote=false;TR.everDragged=false;TR.guideOn=true;
   try{guideVisible=false;}catch(e){}
   cs3.finishReady=false;cs3.finishStart=0;cs3.flipStart=0;cs3.activePointer=null;try{dragging=false;currentTool='trimx';}catch(e){}
   buildModel();
@@ -1021,7 +1038,7 @@ function onDown(e){if(!TR.active)return;var c=canvasEl();if(!c||e.target!==c)ret
   if(P.id!==null)return;P.mode=(TR.phase==='carve'&&!findContact(e.clientX,e.clientY))?'zoom':'carve';P.z0=TR.zoomF||1;P.y0=e.clientY;P.id=e.pointerId;P.x=P.lx=e.clientX;P.y=P.ly=e.clientY;P.still=0;P.down=true;P.t=now();
   try{c.setPointerCapture(e.pointerId);}catch(err){}
   if(TR.phase==='center'){TR.drag=true;TR.p0=planePoint(e.clientX,e.clientY);TR.o0=TR.offset.clone();}
-  if(TR.phase==='carve'&&P.mode==='carve'){if(TR.locked){bubble();return;}scrapeStart();}}
+  if(TR.phase==='carve'&&P.mode==='carve'){if(TR.locked){bubble();return;}pushUndo();scrapeStart();}}
 function onMove(e){if(TR.active&&PT[e.pointerId]){PT[e.pointerId]={x:e.clientX,y:e.clientY};if(P.mode==='pinch'){e.stopImmediatePropagation();var d=pinchDist();if(d>0&&P.pd>0)TR.zoomF=clamp(P.z0*d/P.pd,.7,2.2);return;}}
   if(!TR.active||P.id===null||e.pointerId!==P.id)return;e.stopImmediatePropagation();
   if(P.mode==='zoom'){TR.zoomF=clamp(P.z0*Math.pow(1.006,P.y0-e.clientY),.7,2.2);P.x=e.clientX;P.y=e.clientY;return;}var dx=e.clientX-P.x,dy=e.clientY-P.y;P.x=e.clientX;P.y=e.clientY;
@@ -1520,7 +1537,7 @@ function show(){var m=document.getElementById('makeMode');if(!m)return;if(!el){e
   el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},3300);}
 function loop(){requestAnimationFrame(loop);try{var m=document.getElementById('makeMode');if(!m||!window.cs3)return;var open=m.classList.contains('show'),trim=window.__sosoTrim&&__sosoTrim.active;
   m.classList.toggle('soso-free',!!(open&&!trim&&!cs3.isTrim&&cs3.freeMode&&!cs3.cut));
-  if(!seen&&!armed&&open&&trim&&__sosoTrim.phase==='carve'){armed=true;seen=true;try{localStorage.setItem(KEY,'1');}catch(e){}setTimeout(show,700);}
+  if(!trim)armed=false;if(!armed&&open&&trim&&__sosoTrim.phase==='carve'){armed=true;setTimeout(show,700);}
 }catch(e){}}
 requestAnimationFrame(loop);
 /* front view: pot no longer bigger than the painted wheel */

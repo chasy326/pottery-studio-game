@@ -70,3 +70,9 @@
 #sosoKiln .kn-bar{width:240px;height:12px;border-radius:6px;background:#e8d3b0;border:2px solid #c9a978;overflow:hidden}
 #sosoKiln .kn-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f2b04a,#e2553f)}
 #sosoKiln .kn-temp-big{font-size:26px;background:#fffaf0cc;border-radius:12px;padding:0 10px}
+#sosoTrimUR{position:absolute;z-index:46;left:10px;top:72px;display:none;gap:8px}
+#sosoTrimUR.show{display:flex}
+#sosoTrimUR .tu-b{all:unset;box-sizing:border-box;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 30%,#5aa866,#2e6b38 70%);border:2px solid #f8f0dc;box-shadow:0 4px 0 #23432d;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#sosoTrimUR .tu-b svg{width:30px;height:30px}
+#sosoTrimUR .tu-b.off{background:radial-gradient(circle at 35% 30%,#b9c0b8,#8d978d 70%);box-shadow:0 4px 0 #6f776f;opacity:.75}
+#sosoTrimUR .tu-b:active{transform:translateY(2px);box-shadow:0 2px 0 #23432d}

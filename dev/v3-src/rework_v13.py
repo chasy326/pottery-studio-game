@@ -32,7 +32,7 @@ function show(){var m=document.getElementById('makeMode');if(!m)return;if(!el){e
   el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(function(){el.classList.remove('show');},3300);}
 function loop(){requestAnimationFrame(loop);try{var m=document.getElementById('makeMode');if(!m||!window.cs3)return;var open=m.classList.contains('show'),trim=window.__sosoTrim&&__sosoTrim.active;
   m.classList.toggle('soso-free',!!(open&&!trim&&!cs3.isTrim&&cs3.freeMode&&!cs3.cut));
-  if(!seen&&!armed&&open&&trim&&__sosoTrim.phase==='carve'){armed=true;seen=true;try{localStorage.setItem(KEY,'1');}catch(e){}setTimeout(show,700);}
+  if(!trim)armed=false;if(!armed&&open&&trim&&__sosoTrim.phase==='carve'){armed=true;setTimeout(show,700);}
 }catch(e){}}
 requestAnimationFrame(loop);
 /* front view: pot no longer bigger than the painted wheel */
