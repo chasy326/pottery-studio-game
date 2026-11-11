@@ -20,17 +20,22 @@ mount.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#2b2724');
 
-const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-const ISO = V(1, 1.08, 1.22).normalize();   // 오른쪽 앞 위에서 내려다보는 시점
-let viewSize = 8.2, viewTarget = 8.2;
+/* 카메라: 캐릭터를 비스듬히 뒤에서 따라다니는 3인칭 시점 (산사 방식)
+   화면 드래그 = 캐릭터를 중심으로 돌려보기 · 휠/두 손가락 = 확대·축소 */
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 120);
+const ISO = V(1, 1.08, 1.22).normalize();   // 처음 시점 방향 (오른쪽 앞 위)
+const CAM = { yaw: Math.atan2(ISO.x, ISO.z), pitch: Math.atan2(ISO.y, Math.hypot(ISO.x, ISO.z)), yawT: 0, pitchT: 0,
+  YAW_MIN: -0.3, YAW_MAX: 1.72, PITCH_MIN: 0.3, PITCH_MAX: 1.15 };   // 벽(뒤·왼쪽)이 화면을 가리지 않는 범위에서만 돌려요
+CAM.yawT = CAM.yaw; CAM.pitchT = CAM.pitch;
+const DEFAULT_VIEW = 5.2;
+let viewSize = DEFAULT_VIEW, viewTarget = DEFAULT_VIEW;          // 보이는 세로 폭(m) — 작을수록 가까이
 const camFocus = V(0, 0.6, 0), camFocusTarget = V(0, 0.6, 0);
+const camDir = () => V(Math.sin(CAM.yaw) * Math.cos(CAM.pitch), Math.sin(CAM.pitch), Math.cos(CAM.yaw) * Math.cos(CAM.pitch));
 function fitCamera() {
-  const a = innerWidth / innerHeight;
-  const base = a < 0.8 ? viewSize * 1.35 : viewSize;      // 세로 화면은 조금 더 멀리
-  camera.left = -base * a / 2; camera.right = base * a / 2;
-  camera.top = base / 2; camera.bottom = -base / 2;
+  const a = innerWidth / innerHeight; camera.aspect = a;
   camera.updateProjectionMatrix();
 }
+function camDist() { const a = innerWidth / innerHeight, h = a < 0.8 ? viewSize * 1.25 : viewSize; return h / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))); }
 
 /* ---------- 조명 ---------- */
 scene.add(new THREE.HemisphereLight('#fff1dc', '#5a4a3c', 1.0));
@@ -907,9 +912,24 @@ addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 addEventListener('blur', () => keys.clear());
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), ground = new THREE.Plane(UP, 0);
 let down = null;
-renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+const touches = new Map(); let pinch0 = 0, view0 = 0, dragging = false;
+renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY }; dragging = false; touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2) { const [a, b] = [...touches.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); view0 = viewTarget; down = null; } });
+renderer.domElement.addEventListener('pointermove', e => {
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2 && pinch0) { const [a, b] = [...touches.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); viewTarget = THREE.MathUtils.clamp(view0 * pinch0 / Math.max(20, d), 2.2, 10); return; }
+  if (!down || !(e.buttons & 1) && e.pointerType === 'mouse') return;
+  if (!dragging && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) dragging = true;
+  if (dragging) { const k = 4.2 / Math.min(innerWidth, innerHeight);
+    CAM.yawT = THREE.MathUtils.clamp(CAM.yawT - (e.clientX - down.lx) * k, CAM.YAW_MIN, CAM.YAW_MAX);
+    CAM.pitchT = THREE.MathUtils.clamp(CAM.pitchT + (e.clientY - down.ly) * k * 0.7, CAM.PITCH_MIN, CAM.PITCH_MAX); }
+  down.lx = e.clientX; down.ly = e.clientY;
+});
+const endTouch = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = 0; };
+renderer.domElement.addEventListener('pointercancel', e => { endTouch(e); down = null; });
 renderer.domElement.addEventListener('pointerup', e => {
-  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) return; down = null;
+  endTouch(e);
+  if (!down || dragging || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) { down = null; return; } down = null;
   if (sitting || fading) return;
   ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
@@ -929,7 +949,8 @@ renderer.domElement.addEventListener('pointerup', e => {
   if (hits.length) { const w = WHEELS.find(w => hits[0].object.parent === w.g || hits[0].object.parent?.parent === w.g); if (w) return trySit(w); }
   const pt = V(); if (ray.ray.intersectPlane(ground, pt)) { sitTarget = null; walkTo(pt.x, pt.z); showMarker(pt); }
 });
-renderer.domElement.addEventListener('wheel', e => { viewTarget = THREE.MathUtils.clamp(viewTarget + e.deltaY * 0.006, 3, 11); e.preventDefault(); }, { passive: false });
+renderer.domElement.addEventListener('wheel', e => { viewTarget = THREE.MathUtils.clamp(viewTarget * (1 + e.deltaY * 0.0012), 2.2, 10); e.preventDefault(); }, { passive: false });
+renderer.domElement.style.touchAction = 'none';
 // 이동 목표 표시
 const marker = add(scene, new THREE.RingGeometry(0.12, 0.17, 24), new THREE.MeshBasicMaterial({ color: '#fff4dc', transparent: true, opacity: 0.8, depthWrite: false }), 0, 0.01, 0, { rx: -Math.PI / 2, cast: false });
 marker.visible = false;
@@ -954,14 +975,14 @@ function trySit(w = nearestFreeWheel(), force = false) {
   route = [];
   sitting = true; goal = null; sitTarget = w;
   seatOn(player, w); sitBtn.textContent = '일어서기';
-  viewTarget = 5.4; setHint('흙을 물레 가운데에 올렸어요');
+  viewTarget = 3.6; setHint('흙을 물레 가운데에 올렸어요');
   if (window.HeukThrow) window.HeukThrow.open({ skin: PLAYER_KEY === 'B' ? '#f3bda6' : '#f0b39b', onExit: () => stand(), say: t => sayTeacher(t), onCarry: pc => startCarry(pc) });
 }
 function stand() {
   if (!sitting) return; sitting = false; standUp(player, sitTarget);
   const spot = freeSpotNear(sitTarget.seat.x, sitTarget.seat.z - 0.42); player.position.set(spot.x, 0, spot.z); player.rotation.y = Math.PI;
   goal = null; route = []; keys.clear(); sitTarget = null;
-  sitBtn.textContent = '물레에 앉기'; viewTarget = 8.2; setHint('바닥을 누르거나 WASD로 걸어요');
+  sitBtn.textContent = '물레에 앉기'; viewTarget = DEFAULT_VIEW; setHint('바닥을 누르거나 WASD로 걸어요');
 }
 sitBtn.onclick = () => (sitting ? stand() : trySit());
 // 캐릭터 고르기
@@ -1008,7 +1029,7 @@ function applyRoom(id, from) {
   const d = ROOMS[id].doors.find(o => o.to === from) || ROOMS[id].doors[0];
   player.position.set(d.x + 0.75, 0, d.z); player.rotation.y = Math.PI / 2; doorLock = d;
   goal = null; route = []; sitTarget = null; marker.visible = false; pendingPlace = null;
-  camFocus.set(player.position.x * 0.55 + 0.3, 0.55, player.position.z * 0.45);
+  camFocus.set(player.position.x, 0.62, player.position.z);
   roomNav.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.r === id));
   $('#placeName').textContent = ROOM_INFO[id].name;
   bubble.hidden = true; speaker = null; nextBubble = performance.now() + 1500;
@@ -1120,6 +1141,20 @@ function arrivePending() {
   if (pendingPlace === null) return; const i = pendingPlace; pendingPlace = null; const p = PEDESTALS[i];
   if (Math.hypot(player.position.x - p.stand.x, player.position.z - p.stand.z) < 0.9) placeOn(i);
 }
+/* 카메라와 캐릭터 사이를 가리는 가구·벽은 반투명하게 */
+const occRay = new THREE.Raycaster(), faded = new Map(); let occT = 0;
+function fadeOccluders(now) {
+  if (now - occT < 90) return; occT = now;
+  const target = V(player.position.x, 0.55, player.position.z), from = camera.position.clone(), dir = target.clone().sub(from), len = dir.length(); dir.normalize();
+  const hitNow = new Set(), grp = ROOMS[curRoom].g;
+  for (const off of [0, 0.35, -0.35]) {                       // 몸 가운데 · 머리 · 발 쪽 세 줄
+    const t2 = target.clone().add(V(0, off + 0.1, 0)), d2 = t2.clone().sub(from); const l2 = d2.length(); d2.normalize();
+    occRay.set(from, d2); occRay.far = l2 - 0.35;
+    for (const h of occRay.intersectObject(grp, true)) { const o = h.object; if (!o.isMesh || !o.material || o.userData.noFade) continue; hitNow.add(o); }
+  }
+  for (const o of hitNow) if (!faded.has(o)) { const orig = o.material; const m = (Array.isArray(orig) ? orig[0] : orig).clone(); m.transparent = true; m.opacity = 0.22; m.depthWrite = false; o.material = m; faded.set(o, orig); }
+  for (const [o, orig] of faded) if (!hitNow.has(o)) { o.material.dispose(); o.material = orig; faded.delete(o); }
+}
 /* ---------- 루프 ---------- */
 const clock = new THREE.Clock();
 function frame() {
@@ -1133,7 +1168,7 @@ function updateMove(dt) {
   if (!sitting) {
     let dx = 0, dz = 0;
     // 화면 기준 방향키: 위 = 화면 안쪽
-    const fwd = V(-ISO.x, 0, -ISO.z).normalize(), right = V(fwd.z * -1, 0, fwd.x);
+    const fwd = V(-Math.sin(CAM.yaw), 0, -Math.cos(CAM.yaw)), right = V(fwd.z * -1, 0, fwd.x);
     if (keys.has('w') || keys.has('arrowup')) { dx += fwd.x; dz += fwd.z; }
     if (keys.has('s') || keys.has('arrowdown')) { dx -= fwd.x; dz -= fwd.z; }
     if (keys.has('d') || keys.has('arrowright')) { dx += right.x; dz += right.z; }
@@ -1163,10 +1198,12 @@ function afterMove(dt, now) {
   WHEELS.forEach((w, i) => { const spin = 0; w.head.rotation.y += spin * dt; if (w.clay) w.clay.rotation.y += spin * dt; });
   if (marker.visible) { marker.userData.t += dt; marker.material.opacity = Math.max(0, 0.8 - marker.userData.t * 0.6); }
   // 카메라: 캐릭터를 부드럽게 따라감
-  const focus = window.__focus ? window.__focus : sitting ? V(sitTarget.g.position.x, 0.55, sitTarget.g.position.z - 0.25) : (innerWidth / innerHeight < 0.8 ? V(player.position.x * 0.92, 0.55, player.position.z * 0.85) : V(player.position.x * 0.55 + 0.3, 0.55, player.position.z * 0.45));
-  camFocusTarget.copy(focus); camFocus.lerp(camFocusTarget, Math.min(1, dt * 4));
-  viewSize += (viewTarget - viewSize) * Math.min(1, dt * 4); fitCamera();
-  camera.position.copy(camFocus).addScaledVector(ISO, 30); camera.lookAt(camFocus);
+  const focus = window.__focus ? window.__focus : sitting ? V(sitTarget.g.position.x, 0.6, sitTarget.g.position.z - 0.25) : V(player.position.x, 0.62, player.position.z);
+  camFocusTarget.copy(focus); camFocus.lerp(camFocusTarget, Math.min(1, dt * 5));
+  viewSize += (viewTarget - viewSize) * Math.min(1, dt * 5);
+  CAM.yaw += (CAM.yawT - CAM.yaw) * Math.min(1, dt * 10); CAM.pitch += (CAM.pitchT - CAM.pitch) * Math.min(1, dt * 10);
+  camera.position.copy(camFocus).addScaledVector(camDir(), camDist()); camera.lookAt(camFocus);
+  fadeOccluders(now);
   updateBubble(now);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -1198,5 +1235,5 @@ renderMyPieces(); addEventListener('heukmaru-pieces', renderMyPieces);
 { const c = loadPieces().find(o => o.place === 'carry'); if (c) carrying = c; }
 addEventListener('contextmenu', e => { if (!/INPUT|TEXTAREA/.test(e.target.tagName)) e.preventDefault(); });
 renderGallery(); applyRoom('studio', null); player.position.set(-2.6, 0, 2.4); doorLock = null; setHint('바닥을 누르거나 WASD로 걸어요');
-window.__heukmaru = { craftBtn, camera, setGoalDirect(x, z) { goal = { x, z }; route = []; }, findPath, walkTo, sim(sec, keyset) { const k0 = [...keys]; keys.clear(); (keyset || []).forEach(k => keys.add(k)); window.__freeze = true; for (let t = 0; t < sec; t += 1 / 60) updateMove(1 / 60); keys.clear(); k0.forEach(k => keys.add(k)); window.__freeze = false; }, get sitTarget(){return sitTarget}, stepMove, freeSpotNear, penetration, get partner(){return partner}, goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
+window.__heukmaru = { craftBtn, camera, setGoalDirect(x, z) { goal = { x, z }; route = []; }, findPath, walkTo, sim(sec, keyset) { const k0 = [...keys]; keys.clear(); (keyset || []).forEach(k => keys.add(k)); window.__freeze = true; for (let t = 0; t < sec; t += 1 / 60) updateMove(1 / 60); keys.clear(); k0.forEach(k => keys.add(k)); window.__freeze = false; }, get sitTarget(){return sitTarget}, stepMove, freeSpotNear, penetration, get partner(){return partner}, goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; }, CAM };
 })();
