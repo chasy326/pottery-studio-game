@@ -391,9 +391,9 @@ function cInterp(r,t){var p=cClamp(t,0,1)*CN,i=Math.floor(p),f=p-i;return r[i]*(
 function cHollow(H,f){return f<H-.012;}
 function cVol(r,H,f,w){var n=128,v=0,h=cHollow(H,f);for(var k=0;k<n;k++){var y=(k+.5)/n*H,ro=cInterp(r,y/H);v+=ro*ro;if(h&&y>f){var ri=Math.max(.015,ro-w);v-=ri*ri;}}return v*H/n;}
 var CSPECS={
- cup:{label:'컵',H:.70,f:.07,hint:'곧게 선 몸통과 열린 입구',baseWall:.06,mass:1.15,lumpH:.52,r:function(t){return .35+.03*t;}},
- bowl:{label:'그릇',H:.44,f:.07,hint:'둥근 몸통과 벌어진 입구',baseWall:.06,mass:1.35,lumpH:.50,r:function(t){return .30+.36*Math.pow(t,.8);}},
- plate:{label:'접시',H:.10,f:.055,hint:'낮고 넓게 눕힌 사선 벽',baseWall:.065,mass:1.00,lumpH:.48,r:function(t){return .55+.35*t;}},
+ cup:{label:'컵',H:.80,f:.07,hint:'곧게 선 몸통과 열린 입구',baseWall:.06,mass:1.15,lumpH:.52,pts:[[0,.29],[.06,.325],[.18,.34],[.5,.345],[.85,.355],[1,.36]]},
+ bowl:{label:'그릇',H:.50,f:.07,hint:'둥근 몸통과 벌어진 입구',baseWall:.06,mass:1.35,lumpH:.50,pts:[[0,.25],[.08,.33],[.22,.42],[.42,.5],[.65,.55],[.85,.575],[1,.585]]},
+ plate:{label:'접시',H:.14,f:.055,hint:'낮고 넓게 눕힌 사선 벽',baseWall:.06,mass:1.00,lumpH:.48,pts:[[0,.44],[.2,.56],[.45,.67],[.7,.75],[1,.81]]},
  jar:{label:'항아리',H:.86,f:.08,hint:'배가 부르고 입구가 좁은 몸통',baseWall:.06,mass:1.45,lumpH:.62,pts:[[0,.28],[.2,.42],[.45,.50],[.7,.40],[.85,.30],[.95,.28],[1,.33]]},
  vase:{label:'꽃병',H:.96,f:.08,hint:'배와 길쭉한 목의 대비',baseWall:.055,mass:1.6,lumpH:.66,pts:[[0,.27],[.15,.33],[.35,.40],[.55,.36],[.72,.24],[.85,.18],[.93,.19],[1,.25]]}
 };
@@ -1537,7 +1537,7 @@ requestAnimationFrame(sideDeco);
 })();
 </script>
 <style id="soso-v14-style">
-#makeMode.soso-easy #sosoOpenHelp,#makeMode.soso-easy #sosoCutHelp .fg,#makeMode.soso-easy #sosoBottomPanel .tooltray,#makeMode.soso-easy #sosoBottomPanel .speed-control,#makeMode.soso-easy #guideToggle{display:none!important}
+#makeMode.soso-easy #sosoOpenHelp,#makeMode.soso-easy #sosoCutHelp .fg,#makeMode.soso-easy #sosoBottomPanel .tooltray,#makeMode.soso-easy #sosoBottomPanel .speed-control{display:none!important}
 #sosoProg{position:absolute;z-index:30;left:50%;top:84px;transform:translateX(-50%);display:none;align-items:center;gap:3px;padding:4px 8px;border-radius:18px;background:#fffaf0e8;border:2px solid #e2c99a;box-shadow:0 3px 0 rgba(91,58,31,.15)}
 #makeMode.soso-easy.soso-forming #sosoProg{display:flex}
 #sosoProg .d{width:21px;height:21px;border-radius:50%;background:#efe3cc;color:#9a7b58;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1}
@@ -1612,6 +1612,7 @@ function sel(n){try{var sd=window.__sosoStageDone;if(sd)sd[n-1]=true;if(n===2){c
 function st(){return cs3.renderState||craftTargetState3();}
 var tC={};function T(){if(!tC[vessel])tC[vessel]=cSpecState(vessel);return tC[vessel];}
 function p2(){var s=st(),t=T();var dp=s.f>=s.H-.002?0:Math.max(0,Math.min(1,(s.H-s.f)/Math.max(.02,s.H-t.f*1.5)));if(r0start==null)r0start=s.r[0];var need=t.r[0]-r0start,wp=need<.03?1:Math.max(0,Math.min(1,(s.r[0]-r0start)/(need*.85)));return {dp:dp,wp:wp,v:dp*.55+wp*.45};}
+function fitPct(){try{var s=st(),t=T(),N=18,sum=0;for(var k=0;k<N;k++){var tt=(k+.5)/N,y=t.H*tt,e;if(y>s.H+.004)e=.12;else{e=Math.abs(cInterp(s.r,y/Math.max(.01,s.H))-cInterp(t.r,tt));}sum+=Math.max(0,1-e/.09);}var hs=Math.max(0,1-Math.abs(s.H-t.H)/.3);return Math.round(100*(.75*sum/N+.25*hs));}catch(e){return 0;}}
 function key(){if(!mode.classList.contains('show')||trimOn()||cs3.isTrim||cs3.finishReady)return '';if(cs3.freeMode)return 'free';if(cs3.cut)return '';if(cs3.step===1)return cs3.centered?'s1done':'s1';if(cs3.step===2)return 's2';if(cs3.step===3)return 's3';if(cs3.step===4)return 's4';return '';}
 function scr(r,t){try{var c=renderer3.domElement.getBoundingClientRect(),m=mode.getBoundingClientRect(),P=potGroup3.position,k=potGroup3.scale.x,q=new THREE.Vector3(P.x+r*k,P.y+heightScale*k*t,P.z).project(camera3);return {x:c.left-m.left+(q.x+1)/2*c.width,y:c.top-m.top+(1-q.y)/2*c.height};}catch(e){return null;}}
 function rAt(t){return cInterp(radiusProfile,t);}
@@ -1641,7 +1642,6 @@ function loop(){requestAnimationFrame(loop);try{if(!ensure()||!window.cs3)return
   var open=mode.classList.contains('show');mode.classList.toggle('soso-easy',easy&&open);
   var k=open&&easy?key():'';var forming=!!k||(easy&&open&&!trimOn()&&!cs3.isTrim&&!cs3.finishReady&&!cs3.cut);mode.classList.toggle('soso-forming',forming);
   if(!easy||!open){hideHand();if(ask)ask.classList.remove('show');return;}
-  try{if(!guideVisible&&CSPECS[vessel]){guideVisible=true;cs3.guidePref=true;}}catch(e){}
   var now=performance.now();
   if(k!==stageKey){stageKey=k;stageAt=now;touched=false;if(k==='s2')r0start=null;if(k!=='s3')ask.classList.remove('show');}
   try{var ub=document.querySelectorAll('#makeMode .soso-undo-btn'),vt=$('sosoViewToggle'),mr=mode.getBoundingClientRect(),L=ub.length?ub[ub.length-1].getBoundingClientRect().right:140,R=vt&&vt.offsetWidth?vt.getBoundingClientRect().left:mr.right-12,ty=ub.length?ub[0].getBoundingClientRect():null;var cx=((L+R)/2-mr.left)+'px';if(prog.style.left!==cx)prog.style.left=cx;if(ty){var tt=(ty.top+ty.height/2-mr.top-16)+'px';if(prog.style.top!==tt)prog.style.top=tt;}}catch(e){}
@@ -1651,7 +1651,7 @@ function loop(){requestAnimationFrame(loop);try{if(!ensure()||!window.cs3)return
   if(k==='s1'){g=(window.__sosoCenterScore||0)/5;setHint(HINT.s1);}
   else if(k==='s1done'){g=1;if(!advancing)celebrate(function(){sel(2);});}
   else if(k==='s2'){var pp=p2();g=pp.v;setHint(pp.dp<1?HINT.s2a:HINT.s2b);if(pp.dp>=1&&pp.wp>=1&&!advancing&&!down)celebrate(function(){sel(3);});}
-  else if(k==='s3'){var f=window.__sosoFit,pct=f?f.pct:0;g=pct/80;setHint(HINT.s3);if(pct>=80&&!advancing&&!down&&!ask.classList.contains('show')){celebrate(function(){var sd=window.__sosoStageDone;if(sd)sd[3]=true;try{craftRefresh3();}catch(e){}ask.classList.add('show');});}}
+  else if(k==='s3'){var pct=fitPct();g=pct/80;setHint(HINT.s3);if(pct>=80&&!advancing&&!down&&!ask.classList.contains('show')){celebrate(function(){var sd=window.__sosoStageDone;if(sd)sd[3]=true;try{craftRefresh3();}catch(e){}ask.classList.add('show');});}}
   else if(k==='s4'){g=cs3.cutProg||0;setHint(HINT.s4);}
   gaugeSet(k==='free'?null:g);
   /* hand */
@@ -1670,6 +1670,37 @@ setInterval(function(){try{var ov=$('sosoSettingsOverlay'),sp=document.querySele
   else if(spHome&&sp.parentElement!==spHome){spHome.appendChild(sp);}}catch(e){}},250);
 /* trim pinch hint: two gloves */
 setInterval(function(){var ph=$('sosoPinchHint');if(ph&&!ph.dataset.hands){var stg=ph.querySelector('.stage');if(stg){ph.dataset.hands='1';stg.innerHTML='<img class="hd a" src="'+HAND+'" alt=""><img class="hd b" src="'+HAND+'" alt="">';}}},300);
+})();
+</script>
+<script id="soso-v15">
+(function(){
+function $(id){return document.getElementById(id);}
+function trimOn(){return window.__sosoTrim&&__sosoTrim.active;}
+/* clay streaks so the turning pot is visible */
+var tex=null;
+function mkTex(){var c=document.createElement('canvas');c.width=512;c.height=128;var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,512,128);
+  var seed=7;function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647;}
+  for(var i=0;i<90;i++){var x=rnd()*512,w=1+rnd()*4,a=.035+rnd()*.09;g.fillStyle='rgba(95,62,35,'+a.toFixed(3)+')';g.fillRect(x,0,w,128);}
+  for(var j=0;j<5;j++){var cx=60+j*100+rnd()*30,cy=20+rnd()*88,gr=g.createRadialGradient(cx,cy,0,cx,cy,26);gr.addColorStop(0,'rgba(90,58,32,.22)');gr.addColorStop(1,'rgba(90,58,32,0)');g.fillStyle=gr;g.fillRect(cx-30,cy-30,60,60);}
+  for(var k=0;k<4;k++){var hx=30+k*128+rnd()*40,hy=16+rnd()*96,gh=g.createRadialGradient(hx,hy,0,hx,hy,16);gh.addColorStop(0,'rgba(255,255,255,.55)');gh.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gh;g.fillRect(hx-18,hy-18,36,36);}
+  tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;}
+/* slurry marks on the wheel head, turning with the wheel */
+var marks=null;
+function mkMarks(){marks=new THREE.Group();marks.name='soso_wheelmarks';
+  var mw=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.42,depthWrite:false,side:THREE.DoubleSide}),md=new THREE.MeshBasicMaterial({color:0x6d5a72,transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide});
+  for(var i=0;i<7;i++){var r0=.72+((i*37)%17)/100,len=.35+((i*53)%30)/100,a=new THREE.Mesh(new THREE.RingGeometry(r0,r0+.035,24,1,i*Math.PI*2/7,len),i%2?md:mw);a.rotation.x=-Math.PI/2;marks.add(a);}
+  for(var j=0;j<4;j++){var b=new THREE.Mesh(new THREE.PlaneGeometry(.2,.03),md);b.rotation.x=-Math.PI/2;b.rotation.z=j*Math.PI/2+.4;var ang=j*Math.PI/2+.4;b.position.set(Math.cos(ang)*.88,0,-Math.sin(ang)*.88);marks.add(b);}
+  marks.position.y=.004;marks.renderOrder=1;}
+var NAMES={cup:'컵',bowl:'밥그릇',plate:'접시',jar:'항아리',vase:'꽃병'};
+function loop(){requestAnimationFrame(loop);try{if(!window.cs3||!window.potGroup3&&typeof potGroup3==='undefined')return;var m=$('makeMode'),open=m&&m.classList.contains('show');
+  if(!tex)mkTex();if(!marks)mkMarks();
+  var trim=trimOn()||cs3.isTrim;
+  if(typeof potMesh3!=='undefined'&&potMesh3&&potMesh3.material&&!trim){var mt=potMesh3.material;if(mt.map!==tex&&!mt.vertexColors){mt.map=tex;mt.needsUpdate=true;}}
+  if(marks.parent!==potGroup3)potGroup3.add(marks);marks.visible=!!(open&&!trim&&!cs3.cut);
+  /* finished: no more cut instructions on screen */
+  if(open&&cs3.cut&&!trim){var t=$('makeTitle'),nm=(window.vesselNames&&vesselNames[vessel])||NAMES[vessel]||'도자기',tt='완성! · '+nm;if(t&&t.textContent!==tt)t.textContent=tt;var h=$('makeHint'),ht=cs3.finishReady?'굽 깎기로 넘어가거나, 한 바퀴 돌려 봐요':'짠! '+nm+' 모양 완성!';if(h&&h.textContent!==ht)h.textContent=ht;}
+}catch(e){}}
+requestAnimationFrame(loop);
 })();
 </script>
 </body></html>
