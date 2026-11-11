@@ -1622,7 +1622,7 @@ const Net = (() => {
   function start() {
     try {
       if (/[?&]net=local\b/.test(location.search) && window.BroadcastChannel) tr = localTr();
-      else if (window.HEUK_FB && window.HEUK_FB.apiKey && window.firebase && firebase.database) tr = firebaseTr(window.HEUK_FB);
+      else if (window.HEUK_FB && window.HEUK_FB.databaseURL && window.firebase && firebase.database) tr = firebaseTr(window.HEUK_FB);
     } catch (e) { console.warn('흙마루 온라인 연결 실패', e); tr = null; }
     return !!tr;
   }
