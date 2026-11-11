@@ -1165,6 +1165,7 @@ function renderMyPieces() {
 renderMyPieces(); addEventListener('heukmaru-pieces', renderMyPieces);
 // 들고 있던 작품이 있으면 다시 들기(새로고침 대비)
 { const c = loadPieces().find(o => o.place === 'carry'); if (c) carrying = c; }
+addEventListener('contextmenu', e => { if (!/INPUT|TEXTAREA/.test(e.target.tagName)) e.preventDefault(); });
 renderGallery(); applyRoom('studio', null); player.position.set(-2.6, 0, 2.4); doorLock = null; setHint('바닥을 누르거나 WASD로 걸어요');
 window.__heukmaru = { craftBtn, camera, setGoalDirect(x, z) { goal = { x, z }; route = []; }, findPath, walkTo, sim(sec, keyset) { const k0 = [...keys]; keys.clear(); (keyset || []).forEach(k => keys.add(k)); window.__freeze = true; for (let t = 0; t < sec; t += 1 / 60) updateMove(1 / 60); keys.clear(); k0.forEach(k => keys.add(k)); window.__freeze = false; }, get sitTarget(){return sitTarget}, stepMove, freeSpotNear, penetration, get partner(){return partner}, goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
 })();

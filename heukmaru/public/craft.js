@@ -221,7 +221,7 @@ async function thumb(pc, size = 120) {
 
 /* ---------- 공통 화면 틀 ---------- */
 const css = document.createElement('style'); css.textContent = `
-.cf{position:fixed;inset:0;z-index:30;background:#221e1b;color:#f3ebdf;font-family:inherit;display:flex;flex-direction:column}
+.cf{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:fixed;inset:0;z-index:30;background:#221e1b;color:#f3ebdf;font-family:inherit;display:flex;flex-direction:column}
 .cf[hidden]{display:none}
 .cf-top{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid #ffffff14}
 .cf-top h2{margin:0;font-size:17px;font-weight:700;flex:1}
@@ -234,7 +234,7 @@ const css = document.createElement('style'); css.textContent = `
 .cf-btn{border:1px solid #ffffff2b;background:#3a3430;color:#f3ebdf;border-radius:999px;padding:10px 16px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .cf-btn.pri{background:#f3ece2;color:#2f2925;border-color:#f3ece2}
 .cf-btn:disabled{opacity:.4;cursor:default}
-.cf-btn.on{background:#e9c35a;color:#2b2420;border-color:#e9c35a}
+.cf-btn.on{transform:scale(.97);background:#e9c35a;color:#2b2420;border-color:#e9c35a}
 .cf-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
 .cf-item{background:#38312c;border:2px solid transparent;border-radius:12px;padding:6px 4px 8px;text-align:center;cursor:pointer;font:inherit;color:#e9dfd1}
 .cf-item img{width:72px;height:72px;display:block;margin:0 auto}
@@ -246,7 +246,7 @@ const css = document.createElement('style'); css.textContent = `
 @media (max-width:760px){.cf-body{flex-direction:column}.cf-top .cf-go{order:4;flex-basis:100%;padding:11px}.cf-top{flex-wrap:wrap;row-gap:8px}.cf-top h2{flex:1 1 60%;font-size:16px}.cf-top .cf-steps{order:3;flex-basis:100%}.cf-top .cf-steps span{font-size:11.5px;padding:4px 8px}.cf-x{padding:7px 12px}#dcWrap [data-r],#dcWrap #spin,#dcWrap #tilt{padding:7px 11px;font-size:12px}.cf-side{width:100%!important}}
 `; document.head.appendChild(css);
 let active = null;
-function open(id, html) { let el = $('#' + id); if (!el) { el = document.createElement('div'); el.id = id; el.className = 'cf'; document.body.appendChild(el); } el.innerHTML = html; el.hidden = false; active = id;
+function open(id, html) { let el = $('#' + id); if (!el) { el = document.createElement('div'); el.id = id; el.className = 'cf'; document.body.appendChild(el); } el.innerHTML = html; el.hidden = false; active = id; el.oncontextmenu = e => { if (!/INPUT|TEXTAREA/.test(e.target.tagName)) e.preventDefault(); };
   el.querySelectorAll('.cf-go').forEach(b => b.onclick = () => { const t = el.querySelector(b.dataset.go);
     if (t && !t.disabled) return t.click();
     if (b.dataset.alt) return toast(el, '왁스를 다 바르거나, 아래 \'건너뛰기\'를 눌러요');
@@ -730,28 +730,31 @@ function trimView(id, opts) {
   // 흙덩이 (고정)
   const lumps = []; const lumpMat = new THREE.MeshStandardMaterial({ color: cl.dry, roughness: 0.95 });
   // --- 상태
-  let overCut = 0, step = 0, ang = 0, o0 = 0.05 + Math.random() * 0.03, o = o0, removed = 0, dent = 0, crack = 0, hole = null, finished = false, down = false, tp = null, lastShav = 0;
+  let autoH = false, sweep = 0, curH = 0, overCut = 0, step = 0, ang = 0, o0 = 0.05 + Math.random() * 0.03, o = o0, removed = 0, dent = 0, crack = 0, hole = null, finished = false, down = false, tp = null, lastShav = 0;
   const excess0 = ro.reduce((s, r, k) => s + Math.max(0, r - target[k]), 0);
-  const rate = { wet: 0.5, leather: 0.3, hard: 0.1 }[wet0];
+  const rate = { wet: 0.9, leather: 0.7, hard: 0.35 }[wet0];
   const tip = t => $('#trTip', el).textContent = t, help = h => $('#trHelp', el).innerHTML = h;
   const gauge = (title, frac, col, note) => { $('#trGT', el).textContent = title; const g = $('#trG', el); g.style.width = Math.round(clamp(frac, 0, 1) * 100) + '%'; g.style.background = col; $('#trGN', el).innerHTML = note || ''; };
   const nextBtn = $('#trNext', el), act = $('#trAct', el);
   const setNext = (on, label) => { nextBtn.disabled = !on; if (label) { nextBtn.textContent = label; el.querySelector('.cf-go').textContent = label; } };
   function enter(s) {
     step = s; $('#trSteps', el).innerHTML = TSTEP(s); act.innerHTML = ''; setNext(false, s === 3 ? '깎기 완성 ✓' : '다음 →'); drawGuide(s === 2 ? 'outer' : s === 3 ? 'foot' : '');
-    if (s === 0) { tip('빨간 점이 앞으로 올 때 툭 밀어 중심을 맞춰요');
-      help('그릇을 뒤집어 물레에 올렸어요. 가운데에 있지 않으면 돌 때 한쪽으로 흔들려요. <b>빨간 점(튀어나온 쪽)이 앞으로 올 때</b> 그릇을 누르거나 버튼을 눌러 안쪽으로 밀어요.');
+    if (s === 0) { tip('그릇을 톡톡 눌러 가운데로 밀어요 (3번)');
+      help('그릇을 뒤집어 물레에 올렸어요. 가운데에서 살짝 벗어나 흔들려요. <b>그릇이나 버튼을 톡톡 3번</b> 누르면 가운데로 밀려요.');
       act.innerHTML = '<button class="cf-btn pri" id="trPush" style="padding:13px 24px">👆 툭 밀기</button>'; $('#trPush', el).onclick = push; }
     if (s === 1) { bump.visible = false; tip('그릇 둘레를 3번 눌러 흙덩이로 고정해요'); help('깎는 동안 그릇이 날아가지 않게 둘레에 흙덩이 3개를 꾹 붙여요.');
       act.innerHTML = '<button class="cf-btn pri" id="trLump" style="padding:13px 24px">🟤 흙덩이 붙이기 (0/3)</button>'; $('#trLump', el).onclick = addLump; }
-    if (s === 2) { tip('굽칼을 대고 점선까지 깎아요 (누른 채로 위아래로)');
-      help(`물레가 돌아가요. <b>그릇 옆을 누른 채로 끌면</b> 굽칼이 닿은 곳이 깎여요. 주황 점선이 알맞은 벽 두께예요. ${easy ? '쉬움 모드라 점선보다 더 깎이지 않아요.' : '<b>실전 모드</b>: 점선보다 너무 깎으면 벽이 뚫려요!'}`); }
-    if (s === 3) { fi = Math.max(0.04, ro[0] - 0.035); rebuild(); drawGuide('foot'); tip('굽 안쪽을 눌러 점선 깊이까지 파요');
-      help(`이제 <b>굽 안쪽</b>을 파요. 위(바닥면) 가운데를 누른 채 아래로 끌면 파여요. 바닥 두께가 <b>4~6mm</b>면 알맞아요. ${easy ? '쉬움 모드라 뚫리지 않아요.' : '<b>실전 모드</b>: 너무 파면 바닥에 구멍이 나요!'}`); }
+    if (s === 2) { tip('✋ 꾹 누르고 있으면 굽칼이 알아서 깎아요');
+      help(`<b>아래 버튼을 꾹 누르고 있거나</b>, 화면을 누른 채 위아래로 움직여요. 굽칼이 그릇 겉면을 따라가며 주황 점선까지 깎아요. 게이지가 초록이 되면 다음으로! ${easy ? '' : '<br>실전 모드: 다 깎은 뒤에도 계속 누르면 조금 더 얇아져서 점수가 내려가요.'}`);
+      act.innerHTML = '<button class="cf-btn pri" id="trHold" style="padding:15px 30px;font-size:16px;touch-action:none">✋ 꾹 누르고 있기 · 깎기</button>'; holdBtn(); }
+    if (s === 3) { fi = Math.max(0.04, ro[0] - 0.035); rebuild(); drawGuide('foot'); tip('✋ 꾹 누르고 있으면 굽 안쪽이 파여요');
+      help(`<b>아래 버튼이나 화면 아무 데나 꾹 누르고 있으면</b> 굽 안쪽이 파여요. 바닥 두께 게이지가 <b>초록(4~6mm)</b>이 되면 손을 떼요. ${easy ? '쉬움 모드라 알맞은 두께에서 저절로 멈춰요.' : '<br>실전 모드: 너무 오래 누르면 바닥이 얇아져 점수가 내려가요.'}`);
+      act.innerHTML = '<button class="cf-btn pri" id="trHold" style="padding:15px 30px;font-size:16px;touch-action:none">✋ 꾹 누르고 있기 · 굽 파기</button>'; holdBtn(); }
   }
-  function push() { if (step !== 0) return; const front = -Math.sin(ang) > 0.72;
-    if (easy || front) { o *= 0.45; toast(el, front ? '👍 좋아요!' : '조금 밀렸어요', 700); } else { o = Math.min(o0, o * 1.2); toast(el, '지금 말고 빨간 점이 앞에 올 때!', 1100); }
-    if (o < o0 * 0.12) { o = 0; tip('✅ 중심이 딱 맞았어요!'); setNext(true); setTimeout(() => step === 0 && enter(1), 700); } }
+  function holdBtn() { const b = $('#trHold', el); b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); down = true; autoH = true; tool.visible = true; b.classList.add('on'); };
+    b.onpointerup = b.onpointercancel = () => { down = false; autoH = false; b.classList.remove('on'); }; }
+  function push() { if (step !== 0) return; o *= 0.35; toast(el, '👍 쏙!', 600);
+    if (o < o0 * 0.1) { o = 0; tip('✅ 중심이 딱 맞았어요!'); setNext(true); setTimeout(() => step === 0 && enter(1), 700); } }
   function addLump() { if (step !== 1 || lumps.length >= 3) return; const a = lumps.length * Math.PI * 2 / 3 + 0.4, rr = pc.r[n - 1] + 0.05;
     const m = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), lumpMat); m.scale.set(1, 0.6, 1.2); m.position.set(Math.cos(a) * rr, 0.03, Math.sin(a) * rr); m.rotation.y = -a; spin.add(m); lumps.push(m);
     const b = $('#trLump', el); if (b) b.textContent = `🟤 흙덩이 붙이기 (${lumps.length}/3)`; if (lumps.length >= 3) { tip('✅ 단단히 고정했어요!'); setNext(true); setTimeout(() => step === 1 && enter(2), 700); } }
@@ -760,24 +763,23 @@ function trimView(id, opts) {
   // --- 포인터 → 그릇 좌표
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(V(0, 0, 1), 0), hp = V();
   const toWorld = e => { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam); return ray.ray.intersectPlane(plane, hp) ? hp.clone() : null; };
-  cv.onpointerdown = e => { if (step === 0) return push(); if (step === 1) return addLump(); cv.setPointerCapture(e.pointerId); down = true; tp = toWorld(e); };
+  cv.onpointerdown = e => { e.preventDefault(); if (step === 0) return push(); if (step === 1) return addLump(); cv.setPointerCapture(e.pointerId); down = true; autoH = false; tool.visible = true; tp = toWorld(e); };
   cv.onpointermove = e => { const w = toWorld(e); if (w && step >= 2) { tp = w; tool.visible = true; } };
   cv.onpointerup = cv.onpointercancel = () => { down = false; };
-  cv.onpointerleave = () => { if (!down) tool.visible = false; };
+  cv.oncontextmenu = e => e.preventDefault();
+  const surfX = h => { const k = clamp(Math.round(h / H * (n - 1)), 0, n - 1); return ro[k]; };
   function cut(dt) {
-    if (!tp) return; const sg = tp.x < 0 ? -1 : 1, rad = Math.abs(tp.x), h = H - tp.y; let changed = false, wallAt = null;
-    const kc = clamp(Math.round(h / H * (n - 1)), 0, n - 1);
-    if (step === 2) for (let k = 0; k < n; k++) { const y = H * k / (n - 1); if (y > H * 0.6 || Math.abs(y - h) > 0.04) continue;
-      if (y >= pc.floorT) wallAt = ro[k] - innerR(pc, k);
-      const rk = rad + (target[k] - target[kc]);          // 굽칼 날이 그릇 곡선을 따라가요
-      if (rk >= ro[k]) continue; const minR = easy ? target[k] : (y < pc.floorT ? 0.05 : innerR(pc, k) + 0.004);
-      const want = Math.max(rk, minR); if (want >= ro[k] - 0.0005) continue;
-      const over = ro[k] <= target[k] + 0.001; if (over) overCut = 0.6; const nr = Math.max(want, ro[k] - rate * (over ? 0.18 : 1) * dt); removed += ro[k] - nr; ro[k] = nr; changed = true;
-      if (!easy && y >= pc.floorT && ro[k] - innerR(pc, k) < 0.012) hole = '벽'; }
-    if (step === 3 && rad < fi - 0.004 && h > d) { const maxD = easy ? pc.floorT - 0.045 : pc.floorT; const nd = Math.min(maxD, h, d + rate * 0.22 * dt); if (nd > d + 0.0003) { removed += (nd - d) * 0.5; d = nd; changed = true; }
-      if (!easy && pc.floorT - d < 0.008) hole = '바닥'; }
-    if (changed) { rebuild(); if (wet0 === 'wet') dent += dt; if (wet0 === 'hard') crack += dt * 0.04;
-      lastShav += dt; if (lastShav > 0.05) { lastShav = 0; spawnShaving(V(tp.x, tp.y, 0.05), sg); } }
+    let changed = false, wallAt = null;
+    if (step === 2) { const h = curH;
+      for (let k = 0; k < n; k++) { const y = H * k / (n - 1); if (y > H * 0.6 || Math.abs(y - h) > 0.08) continue;
+        if (y >= pc.floorT) wallAt = ro[k] - innerR(pc, k);
+        const minR = easy ? target[k] : Math.max(y < pc.floorT ? 0.05 : innerR(pc, k) + 0.025, target[k] - 0.018);
+        if (ro[k] <= minR + 0.0003) continue; const over = ro[k] <= target[k] + 0.0005; if (over) overCut = 0.5;
+        const nr = Math.max(minR, ro[k] - rate * (over ? 0.08 : 1) * dt); if (!over) { const lim = target[k]; if (nr < lim && ro[k] > lim) { ro[k] = lim; changed = true; continue; } }
+        removed += ro[k] - nr; ro[k] = nr; changed = true; } }
+    if (step === 3) { const maxD = easy ? pc.floorT - 0.05 : pc.floorT - 0.015; const nd = Math.min(maxD, d + rate * 0.04 * dt); if (nd > d + 0.00005) { removed += (nd - d) * 0.5; d = nd; changed = true; } }
+    if (changed) { rebuild(); if (wet0 === 'wet') dent += dt * 0.5; if (wet0 === 'hard') crack += dt * 0.03;
+      lastShav += dt; if (lastShav > 0.05) { lastShav = 0; spawnShaving(tool.position.clone(), 1); } }
     return { changed, wallAt };
   }
   function size() { const w = wrap.clientWidth, h = wrap.clientHeight; R3.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
@@ -791,13 +793,16 @@ function trimView(id, opts) {
     if (step === 3) { cam.position.set(0, H + dist * 0.62, dist * 0.78); cam.lookAt(0, H * 0.72, 0); } else { cam.position.set(0, H * 0.7 + dist * 0.22, dist); cam.lookAt(0, H * 0.5, 0); }
     if (step === 0) gauge('흔들림', o / o0, o / o0 > 0.5 ? '#e2683f' : o / o0 > 0.15 ? '#e9c35a' : '#5fbf6a', o ? `흔들림 ${Math.round(o / o0 * 100)}% · 0%가 되면 중심!` : '✅ 중심 맞춤');
     if (step === 1) gauge('고정', lumps.length / 3, '#5fbf6a', `흙덩이 ${lumps.length}/3`);
-    if (step >= 2 && tp) { const sg = tp.x < 0 ? -1 : 1; tool.position.set(tp.x, tp.y, 0.06); tool.rotation.set(0, 0, sg < 0 ? Math.PI : 0); if (step === 3) tool.rotation.set(0, 0, -Math.PI / 2.4); if (wet0 === 'hard' && down) tool.position.x += (Math.random() - 0.5) * 0.008; }
+    if (step === 2) { if (autoH || !tp) { sweep += dt * 2.2; curH = (0.5 - 0.5 * Math.cos(sweep)) * H * 0.6; } else curH = clamp(H - tp.y, 0, H * 0.6);
+      tool.position.set(surfX(curH) + 0.012, H - curH, 0.06); tool.rotation.set(0, 0, 0); }
+    if (step === 3) { tool.position.set(0, H - d + 0.012, 0.03); tool.rotation.set(0, 0, -Math.PI / 2.4); }
+    if (step >= 2 && wet0 === 'hard' && down) tool.position.x += (Math.random() - 0.5) * 0.008;
     overCut = Math.max(0, overCut - dt);
     if (step >= 2 && down && !finished) { const r = cut(dt);
-      if (step === 2) { const p = progress(); gauge('남은 흙 깎기', p, p > 0.85 ? '#5fbf6a' : '#e9c35a', `${Math.round(p * 100)}% 깎음${r && r.wallAt != null ? ` · 닿은 곳 벽 두께 ${Math.round(r.wallAt * 100)}mm` : ''}`); setNext(p >= 0.5); if (overCut > 0) { tip('⚠️ 점선보다 더 깎고 있어요! 벽이 얇아져요'); $('#trG', el).style.background = '#e2683f'; } else if (p > 0.97) tip('✅ 바깥을 다 깎았어요! 다음으로'); }
-      if (hole) return fail(); }
+      if (step === 2) { const p = progress(); gauge('남은 흙 깎기', p, p > 0.9 ? '#5fbf6a' : '#e9c35a', `${Math.round(p * 100)}% 깎음${r && r.wallAt != null ? ` · 닿은 곳 벽 두께 ${Math.round(r.wallAt * 100)}mm` : ''}`); setNext(p >= 0.5); if (overCut > 0 && !easy) { tip('⚠️ 다 깎았어요! 더 깎으면 얇아져요'); } else if (p > 0.97) tip('✅ 바깥을 다 깎았어요! 다음 →'); }
+    }
     if (step === 3) { const rem = pc.floorT - d, mm = Math.max(0, Math.round(rem * 100)), ok = rem >= 0.035 && rem <= 0.065;
-      gauge('바닥 두께', 1 - rem / pc.floorT, rem < 0.025 ? '#e2683f' : ok ? '#5fbf6a' : '#e9c35a', `${mm}mm · ${rem < 0.025 ? '⚠️ 너무 얇아요! 그만 파요' : rem < 0.035 ? '조금 얇아요' : ok ? '✅ 알맞아요 (통통 소리)' : '아직 두꺼워요 (둔탁한 소리)'}`); setNext(rem <= 0.065, '깎기 완성 ✓'); if (ok) tip('✅ 굽이 생겼어요! 깎기 완성을 눌러요'); }
+      gauge('바닥 두께', 1 - rem / pc.floorT, rem < 0.025 ? '#e2683f' : ok ? '#5fbf6a' : '#e9c35a', `${mm}mm · ${rem < 0.025 ? '⚠️ 너무 얇아요! 그만 파요' : rem < 0.035 ? '조금 얇아요' : ok ? '✅ 알맞아요 (통통 소리)' : '아직 두꺼워요 (둔탁한 소리)'}`); setNext(rem <= 0.065, '깎기 완성 ✓'); if (ok) tip(easy && rem <= pc.floorT - (pc.floorT - 0.05) + 0.001 ? '✅ 굽이 생겼어요! 깎기 완성을 눌러요' : '✅ 알맞아요! 손을 떼고 깎기 완성'); else if (rem < 0.035) tip('⚠️ 너무 얇아져요! 손을 떼요'); }
     for (const s of shav) { s.v.y -= 2.2 * dt; s.m.position.addScaledVector(s.v, dt); s.m.rotation.y += s.rs * dt; if (s.m.position.y < 0.01) { s.m.position.y = 0.01; s.v.multiplyScalar(0.3); } s.life -= dt; }
     for (let i = shav.length - 1; i >= 0; i--) if (shav[i].life < 0) { S3.remove(shav[i].m); shav[i].m.geometry.dispose(); shav.splice(i, 1); }
     if (cv.width !== Math.floor(wrap.clientWidth * R3.getPixelRatio())) size();
