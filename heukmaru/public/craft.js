@@ -1,5 +1,5 @@
 /* 흙마루 · 공정 (그릇 상태 · 유약 26색 · 표면 질감 계산 · 가마 · 시유실)
-   그릇 상태: raw(날그릇) → dry(마름, 30초) → bisque(초벌) → glazed(꾸미기·유약) → done(재벌 완성) / broken(깨짐)
+   그릇 상태: raw(날그릇, 굽깎기 전) → drying(굽 깎고 말리는 중, 30초) → dry(마름) → bisque(초벌) → glazed(꾸미기·유약) → done(재벌 완성) / broken(깨짐)
    기존 작품(상태 없음)은 done 으로 봐요. */
 (() => {
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -56,14 +56,18 @@ function savePieces(list) { let k = 0; list = list.filter(pc => pc.place === 'ga
   try { localStorage.setItem('heukmaru-pieces', JSON.stringify(list)); } catch (e) { console.warn('저장 공간 부족', e); }
   dispatchEvent(new Event('heukmaru-pieces')); }
 function updatePiece(id, fn) { const list = loadPieces(), pc = list.find(p => p.id === id); if (pc) { fn(pc); savePieces(list); } return pc; }
-function stageOf(pc) { if (!pc.stage) return 'done'; if (pc.stage === 'raw' && Date.now() - (pc.madeAt || 0) > DRY_MS) return 'dry'; return pc.stage; }
-const STAGE_NAME = { raw: '말리는 중', dry: '마름 · 초벌 대기', bisque: '초벌 완료', glazed: '유약 바름 · 재벌 대기', done: '완성', broken: '깨짐' };
-function dryLeft(pc) { return Math.max(0, Math.ceil((DRY_MS - (Date.now() - (pc.madeAt || 0))) / 1000)); }
+function stageOf(pc) { if (!pc.stage) return 'done'; if (pc.stage === 'raw') { if (!pc.trim) return 'raw'; return Date.now() - pc.trim.at > DRY_MS ? 'dry' : 'drying'; } return pc.stage; }
+const STAGE_NAME = { raw: '굽깎기 전', drying: '굽 깎음 · 말리는 중', dry: '마름 · 초벌 대기', bisque: '초벌 완료', glazed: '유약 바름 · 재벌 대기', done: '완성', broken: '깨짐' };
+function dryLeft(pc) { return Math.max(0, Math.ceil((DRY_MS - (Date.now() - (pc.trim ? pc.trim.at : Date.now()))) / 1000)); }
+const WET_MS = 15000, HARD_MS = 120000;
+function wetState(pc) { const a = Date.now() - (pc.madeAt || 0); return a < WET_MS ? 'wet' : a < HARD_MS ? 'leather' : 'hard'; }
+const WET_NAME = { wet: '💧 아직 젖음', leather: '✅ 깎기 좋음 (반건조)', hard: '🪨 단단해짐' };
 
 /* ---------- 그릇 모양 → 메쉬 (UV를 표면 길이에 맞춰서 그림이 고르게) ---------- */
 function profile(pc) {
-  const pts = [[0.001, 0, 'cap', 0]], n = pc.r.length, H = pc.H;
-  for (let k = 0; k < n; k++) pts.push([pc.r[k], H * k / (n - 1), 'out', H * k / (n - 1)]);
+  const n = pc.r.length, H = pc.H, tr = pc.trim, ro = tr && tr.ro ? tr.ro : pc.r, d = tr && tr.d > 0.002 ? tr.d : 0;
+  const pts = d ? [[0.001, d, 'cap', d], [tr.fi, d, 'cap', d], [tr.fi, 0, 'cap', 0]] : [[0.001, 0, 'cap', 0]];
+  for (let k = 0; k < n; k++) pts.push([ro[k], H * k / (n - 1), 'out', H * k / (n - 1)]);
   for (let k = n - 1; k >= 0; k--) { const y = H * k / (n - 1); if (y < pc.floorT) break; pts.push([Math.max(0.02, pc.r[k] - pc.t[k]), y, 'in', y]); }
   pts.push([0.001, pc.floorT, 'floor', pc.floorT]);
   const s = [0]; for (let j = 1; j < pts.length; j++) s.push(s[j - 1] + Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]));
@@ -237,9 +241,9 @@ const css = document.createElement('style'); css.textContent = `
 .cf-item b{display:block;font-size:12px}.cf-item small{display:block;font-size:10.5px;color:#b8aa98;line-height:1.3}
 .cf-item.sel{border-color:#e9c35a}.cf-item.off{opacity:.38;cursor:default}
 .cf-note{font-size:12.5px;color:#cfc2b0;line-height:1.55}
-.cf-steps{display:flex;gap:6px;flex-wrap:wrap}.cf-steps span{font-size:12px;padding:5px 10px;border-radius:999px;background:#3a3430;color:#cdbfad}.cf-steps span.on{background:#f3ece2;color:#2f2925;font-weight:700}
+.cf-steps{display:flex;gap:6px;flex-wrap:wrap}.cf-steps span{font-size:12px;padding:5px 10px;border-radius:999px;background:#3a3430;color:#cdbfad}.cf-steps span.on{background:#f3ece2;color:#2f2925;font-weight:700}.cf-steps span.done{background:#3f5a43;color:#cfe8cf}
 .cf-toast{position:absolute;left:50%;top:80px;transform:translateX(-50%);background:#2b2420f0;border:1px solid #e9c35a;color:#ffe2a6;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;pointer-events:none;transition:opacity .3s;z-index:5}
-@media (max-width:760px){.cf-body{flex-direction:column}.cf-top .cf-go{order:4;flex-basis:100%;padding:11px}.cf-top{flex-wrap:wrap;row-gap:8px}.cf-top h2{flex:1 1 60%;font-size:16px}.cf-top .cf-steps{order:3;flex-basis:100%}.cf-top .cf-steps span{font-size:11.5px;padding:4px 8px}.cf-x{padding:7px 12px}#dcWrap [data-r],#dcWrap #spin,#dcWrap #tilt{padding:7px 11px;font-size:12px}.cf-body>.cf-col[style*='330px']{width:100%!important}}
+@media (max-width:760px){.cf-body{flex-direction:column}.cf-top .cf-go{order:4;flex-basis:100%;padding:11px}.cf-top{flex-wrap:wrap;row-gap:8px}.cf-top h2{flex:1 1 60%;font-size:16px}.cf-top .cf-steps{order:3;flex-basis:100%}.cf-top .cf-steps span{font-size:11.5px;padding:4px 8px}.cf-x{padding:7px 12px}#dcWrap [data-r],#dcWrap #spin,#dcWrap #tilt{padding:7px 11px;font-size:12px}.cf-side{width:100%!important}}
 `; document.head.appendChild(css);
 let active = null;
 function open(id, html) { let el = $('#' + id); if (!el) { el = document.createElement('div'); el.id = id; el.className = 'cf'; document.body.appendChild(el); } el.innerHTML = html; el.hidden = false; active = id;
@@ -288,7 +292,7 @@ function loadView(opts) {
     </div>
     <div class="cf-col" style="flex:1">
       <div class="cf-card"><h3>넣을 수 있는 그릇 · 누르면 빈 칸에 들어가요</h3><div class="cf-list" id="kilnList"></div>
-      <div class="cf-note" style="margin-top:8px">초벌: 다 마른 그릇 (빚고 30초 뒤) · 재벌: 시유실에서 유약 바른 그릇. 초벌과 재벌은 섞어 넣을 수 없어요.</div></div>
+      <div class="cf-note" style="margin-top:8px">초벌: 건조실에서 굽을 깎고 30초 말린 그릇 · 재벌: 시유실에서 유약 바른 그릇. 초벌과 재벌은 섞어 넣을 수 없어요.</div></div>
     </div>
   </div>`);
   const cv = $('#kilnCv', el), g = cv.getContext('2d'); const imgs = {};
@@ -305,11 +309,11 @@ function loadView(opts) {
     $('#kilnWarn', el).innerHTML = pairs.length ? `⚠️ 빨간 줄로 이어진 그릇은 서로 닿아요. 재벌 때 유약이 녹아 붙어 버려요. 칸을 띄워 주세요.` : kind === 'glaze' ? '✅ 그릇끼리 떨어져 있어요.' : kind === 'bisque' ? '초벌은 그릇끼리 닿아도 괜찮아요.' : '';
   }
   function renderList() {
-    const items = list.filter(p => ['raw', 'dry', 'glazed'].includes(stageOf(p)) && !k.slots.includes(p.id) && p.place !== 'carry');
-    $('#kilnList', el).innerHTML = items.length ? items.map(p => { const st = stageOf(p), ok = st !== 'raw' && (!kind || (kind === 'bisque' ? st === 'dry' : st === 'glazed'));
-      return `<button class="cf-item ${ok ? '' : 'off'}" data-id="${p.id}"><img data-pid="${p.id}" alt=""><b>${p.clayName || ''} ${p.name}</b><small>${st === 'raw' ? `말리는 중 ${dryLeft(p)}초` : st === 'dry' ? '초벌 대기' : '재벌 대기'}</small></button>`; }).join('') : '<div class="cf-note">넣을 그릇이 없어요. 물레실에서 빚거나, 초벌한 그릇은 시유실에서 유약을 발라 오세요.</div>';
+    const items = list.filter(p => ['raw', 'drying', 'dry', 'glazed'].includes(stageOf(p)) && !k.slots.includes(p.id) && p.place !== 'carry');
+    $('#kilnList', el).innerHTML = items.length ? items.map(p => { const st = stageOf(p), ok = st !== 'raw' && st !== 'drying' && (!kind || (kind === 'bisque' ? st === 'dry' : st === 'glazed'));
+      return `<button class="cf-item ${ok ? '' : 'off'}" data-id="${p.id}"><img data-pid="${p.id}" alt=""><b>${p.clayName || ''} ${p.name}</b><small>${st === 'raw' ? '🔪 굽깎기 먼저 (건조실)' : st === 'drying' ? `말리는 중 ${dryLeft(p)}초` : st === 'dry' ? '초벌 대기' : '재벌 대기'}</small></button>`; }).join('') : '<div class="cf-note">넣을 그릇이 없어요. 물레실에서 빚거나, 초벌한 그릇은 시유실에서 유약을 발라 오세요.</div>';
     fillThumbs($('#kilnList', el));
-    $('#kilnList', el).querySelectorAll('.cf-item').forEach(b => b.onclick = () => { if (b.classList.contains('off')) return toast(el, b.querySelector('small').textContent.includes('말리는') ? '아직 말리는 중이에요' : '초벌과 재벌은 따로 구워요'); const i = k.slots.indexOf(null); if (i < 0) return toast(el, '가마가 꽉 찼어요'); k.slots[i] = +b.dataset.id; saveKiln(k); loadView(opts); });
+    $('#kilnList', el).querySelectorAll('.cf-item').forEach(b => b.onclick = () => { if (b.classList.contains('off')) return toast(el, (t => t.includes('굽깎기') ? '🌬 건조실에서 굽을 먼저 깎아야 가마에 넣을 수 있어요' : t.includes('말리는') ? '굽 깎은 그릇이 아직 마르는 중이에요' : '초벌과 재벌은 따로 구워요')(b.querySelector('small').textContent)); const i = k.slots.indexOf(null); if (i < 0) return toast(el, '가마가 꽉 찼어요'); k.slots[i] = +b.dataset.id; saveKiln(k); loadView(opts); });
   }
   cv.onclick = e => { const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * cv.width / r.width, y = (e.clientY - r.top) * cv.height / r.height;
     for (let i = 0; i < 12; i++) { const [sx, sy] = slotXY(i); if (Math.hypot(x - sx, y - sy) < 36 && k.slots[i]) { k.slots[i] = null; saveKiln(k); return loadView(opts); } } };
@@ -325,7 +329,7 @@ function loadView(opts) {
   el.querySelector('[data-a="x"]').onclick = () => { closeAll(); opts.onExit && opts.onExit(); };
   const fire = el.querySelector('[data-a="fire"]'); if (fire) fire.onclick = () => { k.phase = 'firing'; k.kind = kind; k.start = Date.now(); k.ctl = { over: 0, reduced: kind === 'glaze' && k.atmos === 'red' && k.mode === 'easy', reduceAt: 0, dev: 0, n: 0 }; saveKiln(k); firingView(opts); };
   draw(); renderList();
-  clearInterval(kilnTimer); kilnTimer = setInterval(() => { if (active !== 'cfKiln' || !$('#kilnList')) return clearInterval(kilnTimer); if (list.some(p => stageOf(p) === 'raw')) renderList(); }, 3000);
+  clearInterval(kilnTimer); kilnTimer = setInterval(() => { if (active !== 'cfKiln' || !$('#kilnList')) return clearInterval(kilnTimer); if (list.some(p => stageOf(p) === 'drying')) renderList(); }, 3000);
 }
 /* 온도 목표 곡선 (0~1 시간 → °C) */
 function targetT(kind, u) { const top = kind === 'bisque' ? 800 : 1250; if (kind === 'bisque') return u < 0.3 ? 20 + u / 0.3 * 180 : 200 + (u - 0.3) / 0.6 * (top - 200) * (u < 0.9 ? 1 : 0) + (u >= 0.9 ? top - 200 : 0); return u < 0.15 ? 20 + u / 0.15 * 280 : u < 0.9 ? 300 + (u - 0.15) / 0.75 * (top - 300) : top; }
@@ -376,8 +380,8 @@ function firingView(opts) {
 function judge(pc, k, byId, touchSet) {
   const R = rnd(pc.id % 100000 + (k.kind === 'glaze' ? 77 : 11)); const res = { ok: true, msgs: [], yo: false };
   if (k.kind === 'bisque') {
-    const weak = pc.score < 45 ? 0.35 : pc.score < 60 ? 0.12 : 0.02; const fast = (k.ctl.over || 0) * 0.9;
-    if (R() < weak + fast) { res.ok = false; res.broken = true; res.msgs.push(fast > 0.2 ? '💥 처음에 너무 빨리 데워서 물기 때문에 터졌어요' : '💥 벽 두께가 고르지 않아 금이 가 깨졌어요'); }
+    const tr = pc.trim || {}; const weak = (pc.score < 45 ? 0.3 : pc.score < 60 ? 0.1 : 0.02) + (tr.score < 50 ? 0.15 : tr.score < 70 ? 0.05 : 0) + (tr.wet === 'hard' ? 0.1 : 0) + Math.min(0.2, tr.crack || 0); const fast = (k.ctl.over || 0) * 0.9;
+    if (R() < weak + fast) { res.ok = false; res.broken = true; res.msgs.push(fast > 0.2 ? '💥 처음에 너무 빨리 데워서 물기 때문에 터졌어요' : (tr.wet === 'hard' ? '💥 너무 마른 뒤에 깎아서 생긴 금이 터졌어요' : tr.score < 60 ? '💥 굽깎기가 고르지 않아 두꺼운 곳에서 금이 갔어요' : '💥 벽 두께가 고르지 않아 금이 가 깨졌어요')); }
     else res.msgs.push('✅ 초벌 완료! 이제 시유실에서 꾸미고 유약을 발라요');
     return res;
   }
@@ -424,7 +428,7 @@ function openGlaze(opts = {}) {
   const list = loadPieces().filter(p => stageOf(p) === 'bisque' && p.place !== 'carry');
   const el = open('cfGlaze', `<div class="cf-top"><h2>🎨 시유실 · 꾸미기와 유약</h2><button class="cf-x" data-a="x">나가기</button></div>
     <div class="cf-body"><div class="cf-col" style="flex:1"><div class="cf-card"><h3>초벌한 그릇 고르기</h3><div class="cf-list" id="gzList"></div>
-    <div class="cf-note" style="margin-top:8px">그릇 순서: 물레로 빚기 → 30초 말리기 → 🔥 가마에서 초벌 → 여기서 꾸미기·유약 → 🔥 가마에서 재벌</div></div></div></div>`);
+    <div class="cf-note" style="margin-top:8px">그릇 순서: 물레로 빚기 → 🔪 굽깎기 → 30초 말리기 → 🔥 가마에서 초벌 → 여기서 꾸미기·유약 → 🔥 가마에서 재벌</div></div></div></div>`);
   $('#gzList', el).innerHTML = list.length ? list.map(p => `<button class="cf-item" data-id="${p.id}"><img data-pid="${p.id}" alt=""><b>${p.clayName || ''} ${p.name}</b><small>${p.decor ? '그림 있음' : '초벌 완료'}</small></button>`).join('') : '<div class="cf-note">초벌한 그릇이 없어요. 🔥 가마실에서 마른 그릇을 초벌해 오세요.</div>';
   fillThumbs(el);
   $('#gzList', el).querySelectorAll('.cf-item').forEach(b => b.onclick = () => decorate(+b.dataset.id, opts));
@@ -437,7 +441,7 @@ function decorate(id, opts) {
   const el = open('cfGlaze', `<div class="cf-top"><h2>🖍️ 꾸미기 · ${pc.clayName || ''} ${pc.name}</h2>${STEP_BAR(0)}<button class="cf-btn pri cf-go" data-go="#next">다 그렸어요 · 유약 바르기 →</button><button class="cf-x" data-a="x">나가기</button></div>
     <div class="cf-body" style="padding:0;gap:0;position:relative"><div style="flex:1;position:relative;min-height:320px" id="dcWrap"><canvas id="dcCv" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
       <div style="position:absolute;left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap"><button class="cf-btn" data-r="-1">◀ 돌리기</button><button class="cf-btn" data-r="1">돌리기 ▶</button><button class="cf-btn" id="spin">🌀 돌림판 켜기</button><button class="cf-btn" id="tilt">🔄 위에서 보기</button></div></div>
-    <div class="cf-col" style="width:min(330px,100%);padding:14px;overflow:auto;background:#2a2420">
+    <div class="cf-col cf-side" style="width:min(330px,100%);padding:14px;overflow:auto;background:#2a2420">
       <div class="cf-card"><h3>도구 · 구워도 남는 도자기용</h3><div class="cf-steps" id="tools"><span data-t="pencil" class="on" style="cursor:pointer">✏️ 색연필</span><span data-t="crayon" style="cursor:pointer">🖍️ 크레파스</span><span data-t="paint" style="cursor:pointer">🖌️ 물감</span><span data-t="erase" style="cursor:pointer">🧽 지우개</span></div>
       <div class="cf-note" style="margin:8px 0 4px">굵기</div><input type="range" id="size" min="1" max="10" value="4" style="width:100%"></div>
       <div class="cf-card"><h3>색</h3><div id="pal" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px"></div></div>
@@ -642,5 +646,198 @@ async function finishGlaze(id, opts) {
   $('#toKiln', el).onclick = () => { closeAll(); opts.onExit && opts.onExit(); opts.goKiln && opts.goKiln(); };
 }
 
-window.HeukCraft = { get active() { return !!active; }, openKiln, openGlaze, makeMesh, stageOf, STAGE_NAME, kilnInfo, dryLeft, GLAZES, compose, thumb, _kiln: kilnState, _save: savePieces, _load: loadPieces, _judge: judge, _openResult: openResult };
+/* =====================================================================
+   건조실 · 굽깎기: 반건조 그릇을 뒤집어 물레에 올리고 ① 중심 ② 고정 ③ 바깥 깎기 ④ 굽 파기
+   ===================================================================== */
+const innerR = (pc, k) => { const y = pc.H * k / (pc.r.length - 1); return y < pc.floorT ? 0 : Math.max(0.02, pc.r[k] - pc.t[k]); };
+function trimTarget(pc) {
+  const n = pc.r.length, kf = Math.min(n - 1, Math.ceil(pc.floorT / pc.H * (n - 1))), inF = Math.max(0.02, pc.r[kf] - pc.t[kf]);
+  const foot = clamp(inF * 0.85, 0.08, pc.r[0]);
+  return pc.r.map((r, k) => { const y = pc.H * k / (n - 1); if (y > pc.H * 0.6) return r; if (y < pc.floorT) return Math.min(r, foot); return Math.min(r, innerR(pc, k) + 0.06); });
+}
+let trimTimer = null;
+function openTrim(opts = {}) {
+  const el = open('cfTrim', `<div class="cf-top"><h2>🔪 굽깎기 · 그릇 고르기</h2><button class="cf-x" data-a="x">나가기</button></div>
+    <div class="cf-body"><div class="cf-col" style="flex:1"><div class="cf-card"><h3>깎을 그릇 · 물레에서 빚은 그릇</h3><div class="cf-list" id="trList"></div>
+    <div class="cf-note" style="margin-top:10px">빚고 <b>15초 ~ 2분</b> 사이가 반건조(깎기 좋음)예요. 너무 젖었을 때 깎으면 찌그러지고, 너무 마르면 단단해서 잘 안 깎이고 금이 가기 쉬워요.<br>🔥 굽을 깎아야 가마에 넣을 수 있어요.</div></div></div></div>`);
+  el.querySelector('[data-a="x"]').onclick = () => { clearInterval(trimTimer); closeAll(); opts.onExit && opts.onExit(); };
+  const list = loadPieces().filter(p => stageOf(p) === 'raw' && p.place !== 'carry'), box = $('#trList', el);
+  box.innerHTML = list.length ? list.map(p => `<button class="cf-item" data-id="${p.id}"><img data-pid="${p.id}" alt=""><b>${p.clayName || ''} ${p.name}</b><small data-w="${p.id}"></small></button>`).join('') : '<div class="cf-note">깎을 그릇이 없어요. 🏺 물레실에서 빚어 와요.</div>';
+  fillThumbs(box);
+  const tick = () => { if (active !== 'cfTrim' || !$('#trList')) return clearInterval(trimTimer);
+    for (const p of list) { const sm = box.querySelector(`[data-w="${p.id}"]`); if (!sm) continue; const w = wetState(p), a = (Date.now() - (p.madeAt || 0)) / 1000;
+      sm.innerHTML = w === 'wet' ? `💧 젖음 · ${Math.ceil(WET_MS / 1000 - a)}초 뒤 깎기 좋음` : w === 'leather' ? `✅ 깎기 좋음 · ${Math.ceil(HARD_MS / 1000 - a)}초 남음` : '🪨 단단해짐 · 깎기 힘듦'; } };
+  tick(); clearInterval(trimTimer); trimTimer = setInterval(tick, 1000);
+  box.querySelectorAll('.cf-item').forEach(b => b.onclick = () => { clearInterval(trimTimer); trimView(+b.dataset.id, opts); });
+}
+const TSTEP = s => `<div class="cf-steps">${['① 중심', '② 고정', '③ 바깥 깎기', '④ 굽 파기'].map((t, i) => `<span class="${i === s ? 'on' : i < s ? 'done' : ''}">${t}</span>`).join('')}</div>`;
+function trimView(id, opts) {
+  const pc = loadPieces().find(p => p.id === id); if (!pc) return openTrim(opts);
+  const wet0 = wetState(pc), easy = pc.mode !== 'real', n = pc.r.length, H = pc.H, Rm = Math.max(...pc.r), cl = CLAY[pc.clay] || CLAY.buff;
+  const el = open('cfTrim', `<div class="cf-top"><h2>🔪 굽깎기 · ${pc.clayName || ''} ${pc.name}</h2><span id="trSteps">${TSTEP(0)}</span><button class="cf-btn pri cf-go" data-go="#trNext">다음 →</button><button class="cf-x" data-a="x">나가기</button></div>
+    <div class="cf-body" style="padding:0;gap:0"><div style="flex:1;position:relative;min-height:340px" id="trWrap"><canvas id="trCv" style="position:absolute;inset:0;width:100%;height:100%;touch-action:none"></canvas>
+      <div id="trTip" style="position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#2b2420e8;border:1px solid #e9c35a66;color:#ffe2a6;padding:8px 16px;border-radius:999px;font-size:14px;font-weight:700;white-space:nowrap;max-width:94%;overflow:hidden;text-overflow:ellipsis;pointer-events:none"></div>
+      <div id="trAct" style="position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap"></div></div>
+    <div class="cf-col cf-side" style="width:min(300px,100%);padding:14px;overflow:auto;background:#2a2420">
+      <div class="cf-card"><h3>흙 상태</h3><div class="cf-note" id="trWet"></div></div>
+      <div class="cf-card"><h3 id="trGT">흔들림</h3><div style="height:14px;border-radius:7px;background:#3a3430;overflow:hidden"><div id="trG" style="height:100%;width:100%;background:#e2683f"></div></div><div class="cf-note" id="trGN" style="margin-top:6px"></div></div>
+      <div class="cf-card"><div class="cf-note" id="trHelp"></div></div>
+      <button class="cf-btn pri" id="trNext" style="width:100%;padding:14px" disabled>다음 →</button>
+    </div></div>`);
+  const quit = () => { stop(); closeAll(); opts.onExit && opts.onExit(); };
+  el.querySelector('[data-a="x"]').onclick = quit;
+  $('#trWet', el).innerHTML = wet0 === 'wet' ? '💧 <b>아직 젖었어요.</b> 지금 깎으면 칼에 흙이 끌려 찌그러지기 쉬워요. 조금 기다렸다 깎는 게 좋아요.' : wet0 === 'leather' ? '✅ <b>반건조 · 깎기 딱 좋아요.</b> 흙이 리본처럼 깎여요.' : '🪨 <b>많이 말라 단단해요.</b> 잘 안 깎이고 금이 가기 쉬워요. 다음엔 빚고 2분 안에 깎아요.';
+  // --- 3D
+  const cv = $('#trCv', el), wrap = $('#trWrap', el);
+  const R3 = new THREE.WebGLRenderer({ canvas: cv, antialias: true }); R3.outputColorSpace = THREE.SRGBColorSpace; R3.setPixelRatio(Math.min(2, devicePixelRatio));
+  const S3 = new THREE.Scene(); S3.background = new THREE.Color('#2b2522'); S3.add(new THREE.HemisphereLight('#fff6e8', '#5a4a3a', 1.0)); const dl = new THREE.DirectionalLight('#ffffff', 1.3); dl.position.set(2, 5, 4); S3.add(dl);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 60);
+  const wheel = new THREE.Mesh(new THREE.CylinderGeometry(Rm + 0.45, Rm + 0.5, 0.12, 48), new THREE.MeshStandardMaterial({ color: '#8a8580', roughness: 0.5, metalness: 0.4 })); wheel.position.y = -0.06; S3.add(wheel);
+  for (let i = 0; i < 3; i++) { const ring = new THREE.Mesh(new THREE.TorusGeometry(0.18 + i * 0.18, 0.004, 4, 64), new THREE.MeshBasicMaterial({ color: '#6f6a65' })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.002; wheel.add(ring); ring.position.y = 0.062; }
+  const spin = new THREE.Group(); S3.add(spin); const off = new THREE.Group(); spin.add(off);
+  // 물레 자국 질감 (돌아가는 게 보이게)
+  const tc = document.createElement('canvas'); tc.width = 256; tc.height = 128; const tg = tc.getContext('2d'); tg.fillStyle = '#fff'; tg.fillRect(0, 0, 256, 128);
+  for (let y = 0; y < 128; y += 3) { tg.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.05})`; tg.fillRect(0, y, 256, 1); }
+  for (let k = 0; k < 6; k++) { tg.fillStyle = 'rgba(0,0,0,.07)'; tg.fillRect(k * 43 + Math.random() * 10, 0, 6 + Math.random() * 8, 128); }
+  const ttex = new THREE.CanvasTexture(tc); ttex.colorSpace = THREE.SRGBColorSpace;
+  const baseCol = new THREE.Color(pc.color || cl.dry); if (wet0 === 'wet') baseCol.multiplyScalar(0.8); if (wet0 === 'hard') baseCol.lerp(new THREE.Color('#ffffff'), 0.12);
+  const pmat = new THREE.MeshStandardMaterial({ color: baseCol, map: ttex, roughness: wet0 === 'wet' ? 0.45 : 0.9, side: THREE.DoubleSide });
+  const ro = pc.r.slice(), target = trimTarget(pc); let d = 0, fi = 0;
+  const piece = new THREE.Mesh(geometryOf(pc), pmat); piece.rotation.x = Math.PI; piece.position.y = H; off.add(piece);
+  const rebuild = () => { piece.geometry.dispose(); piece.geometry = geometryOf({ ...pc, trim: { ro, d, fi } }, 48); };
+  // 목표 점선
+  const dashMat = new THREE.LineDashedMaterial({ color: '#ff8a5a', dashSize: 0.03, gapSize: 0.02, depthTest: false, transparent: true });
+  const guide = new THREE.Group(); guide.renderOrder = 10; S3.add(guide);
+  function drawGuide(kind) { guide.clear();
+    if (kind === 'outer') for (const sg of [-1, 1]) { const pts = []; for (let k = 0; k < n; k++) { const y = H * k / (n - 1); if (y > H * 0.6) break; pts.push(V(sg * target[k], H - y, 0.001)); }
+      const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), dashMat); ln.computeLineDistances(); ln.renderOrder = 10; guide.add(ln); }
+    if (kind === 'foot') { const yy = H - (pc.floorT - 0.05); const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(-fi, yy, 0.001), V(fi, yy, 0.001)]), dashMat); ln.computeLineDistances(); ln.renderOrder = 10; guide.add(ln);
+      for (const sg of [-1, 1]) { const l2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(sg * fi, H, 0.001), V(sg * fi, yy, 0.001)]), dashMat); l2.computeLineDistances(); l2.renderOrder = 10; guide.add(l2); } } }
+  // 빨간 점 (튀어나온 쪽 표시)
+  const bump = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), new THREE.MeshBasicMaterial({ color: '#ff5a3a', depthTest: false })); bump.renderOrder = 11; off.add(bump);
+  // 굽칼
+  const tool = new THREE.Group(); const tmat = new THREE.MeshStandardMaterial({ color: '#c9c4bc', metalness: 0.7, roughness: 0.3, depthTest: false }); const hmat = new THREE.MeshStandardMaterial({ color: '#8a5a35', roughness: 0.7, depthTest: false });
+  const loopM = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.006, 6, 16, Math.PI), tmat); loopM.rotation.z = Math.PI / 2; tool.add(loopM);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.14, 6), tmat); stem.position.set(0.06, 0, 0); stem.rotation.z = Math.PI / 2; tool.add(stem);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.02, 0.36, 10), hmat); handle.position.set(0.3, 0, 0); handle.rotation.z = Math.PI / 2; tool.add(handle);
+  tool.traverse(o => o.renderOrder = 12); tool.visible = false; S3.add(tool);
+  // 흙 리본
+  const shav = []; const shavMat = new THREE.LineBasicMaterial({ color: baseCol.clone().multiplyScalar(0.92) });
+  function spawnShaving(p, sg) { if (shav.length > 70) { const o = shav.shift(); S3.remove(o.m); o.m.geometry.dispose(); }
+    const pts = []; const r0 = 0.012 + Math.random() * 0.012; for (let i = 0; i < 14; i++) { const a = i * 0.7; pts.push(V(Math.cos(a) * r0 * (1 + i * 0.08), i * 0.004, Math.sin(a) * r0 * (1 + i * 0.08))); }
+    const m = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), shavMat); m.position.copy(p); S3.add(m);
+    shav.push({ m, v: V(sg * (0.3 + Math.random() * 0.5), 0.2 + Math.random() * 0.3, 0.3 + Math.random() * 0.4), life: 1.4, rs: (Math.random() - 0.5) * 8 }); }
+  // 흙덩이 (고정)
+  const lumps = []; const lumpMat = new THREE.MeshStandardMaterial({ color: cl.dry, roughness: 0.95 });
+  // --- 상태
+  let overCut = 0, step = 0, ang = 0, o0 = 0.05 + Math.random() * 0.03, o = o0, removed = 0, dent = 0, crack = 0, hole = null, finished = false, down = false, tp = null, lastShav = 0;
+  const excess0 = ro.reduce((s, r, k) => s + Math.max(0, r - target[k]), 0);
+  const rate = { wet: 0.5, leather: 0.3, hard: 0.1 }[wet0];
+  const tip = t => $('#trTip', el).textContent = t, help = h => $('#trHelp', el).innerHTML = h;
+  const gauge = (title, frac, col, note) => { $('#trGT', el).textContent = title; const g = $('#trG', el); g.style.width = Math.round(clamp(frac, 0, 1) * 100) + '%'; g.style.background = col; $('#trGN', el).innerHTML = note || ''; };
+  const nextBtn = $('#trNext', el), act = $('#trAct', el);
+  const setNext = (on, label) => { nextBtn.disabled = !on; if (label) { nextBtn.textContent = label; el.querySelector('.cf-go').textContent = label; } };
+  function enter(s) {
+    step = s; $('#trSteps', el).innerHTML = TSTEP(s); act.innerHTML = ''; setNext(false, s === 3 ? '깎기 완성 ✓' : '다음 →'); drawGuide(s === 2 ? 'outer' : s === 3 ? 'foot' : '');
+    if (s === 0) { tip('빨간 점이 앞으로 올 때 툭 밀어 중심을 맞춰요');
+      help('그릇을 뒤집어 물레에 올렸어요. 가운데에 있지 않으면 돌 때 한쪽으로 흔들려요. <b>빨간 점(튀어나온 쪽)이 앞으로 올 때</b> 그릇을 누르거나 버튼을 눌러 안쪽으로 밀어요.');
+      act.innerHTML = '<button class="cf-btn pri" id="trPush" style="padding:13px 24px">👆 툭 밀기</button>'; $('#trPush', el).onclick = push; }
+    if (s === 1) { bump.visible = false; tip('그릇 둘레를 3번 눌러 흙덩이로 고정해요'); help('깎는 동안 그릇이 날아가지 않게 둘레에 흙덩이 3개를 꾹 붙여요.');
+      act.innerHTML = '<button class="cf-btn pri" id="trLump" style="padding:13px 24px">🟤 흙덩이 붙이기 (0/3)</button>'; $('#trLump', el).onclick = addLump; }
+    if (s === 2) { tip('굽칼을 대고 점선까지 깎아요 (누른 채로 위아래로)');
+      help(`물레가 돌아가요. <b>그릇 옆을 누른 채로 끌면</b> 굽칼이 닿은 곳이 깎여요. 주황 점선이 알맞은 벽 두께예요. ${easy ? '쉬움 모드라 점선보다 더 깎이지 않아요.' : '<b>실전 모드</b>: 점선보다 너무 깎으면 벽이 뚫려요!'}`); }
+    if (s === 3) { fi = Math.max(0.04, ro[0] - 0.035); rebuild(); drawGuide('foot'); tip('굽 안쪽을 눌러 점선 깊이까지 파요');
+      help(`이제 <b>굽 안쪽</b>을 파요. 위(바닥면) 가운데를 누른 채 아래로 끌면 파여요. 바닥 두께가 <b>4~6mm</b>면 알맞아요. ${easy ? '쉬움 모드라 뚫리지 않아요.' : '<b>실전 모드</b>: 너무 파면 바닥에 구멍이 나요!'}`); }
+  }
+  function push() { if (step !== 0) return; const front = -Math.sin(ang) > 0.72;
+    if (easy || front) { o *= 0.45; toast(el, front ? '👍 좋아요!' : '조금 밀렸어요', 700); } else { o = Math.min(o0, o * 1.2); toast(el, '지금 말고 빨간 점이 앞에 올 때!', 1100); }
+    if (o < o0 * 0.12) { o = 0; tip('✅ 중심이 딱 맞았어요!'); setNext(true); setTimeout(() => step === 0 && enter(1), 700); } }
+  function addLump() { if (step !== 1 || lumps.length >= 3) return; const a = lumps.length * Math.PI * 2 / 3 + 0.4, rr = pc.r[n - 1] + 0.05;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), lumpMat); m.scale.set(1, 0.6, 1.2); m.position.set(Math.cos(a) * rr, 0.03, Math.sin(a) * rr); m.rotation.y = -a; spin.add(m); lumps.push(m);
+    const b = $('#trLump', el); if (b) b.textContent = `🟤 흙덩이 붙이기 (${lumps.length}/3)`; if (lumps.length >= 3) { tip('✅ 단단히 고정했어요!'); setNext(true); setTimeout(() => step === 1 && enter(2), 700); } }
+  nextBtn.onclick = () => { if (step < 3) { if (step === 2 && progress() < 0.5) return toast(el, '아직 흙이 많이 남았어요. 점선까지 깎아요'); if (step === 0) o = 0; if (step === 1) while (lumps.length < 3) addLump(); enter(step + 1); } else finish(); };
+  const progress = () => excess0 < 0.01 ? 1 : 1 - ro.reduce((s, r, k) => s + Math.max(0, r - target[k]), 0) / excess0;
+  // --- 포인터 → 그릇 좌표
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(V(0, 0, 1), 0), hp = V();
+  const toWorld = e => { const r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, cam); return ray.ray.intersectPlane(plane, hp) ? hp.clone() : null; };
+  cv.onpointerdown = e => { if (step === 0) return push(); if (step === 1) return addLump(); cv.setPointerCapture(e.pointerId); down = true; tp = toWorld(e); };
+  cv.onpointermove = e => { const w = toWorld(e); if (w && step >= 2) { tp = w; tool.visible = true; } };
+  cv.onpointerup = cv.onpointercancel = () => { down = false; };
+  cv.onpointerleave = () => { if (!down) tool.visible = false; };
+  function cut(dt) {
+    if (!tp) return; const sg = tp.x < 0 ? -1 : 1, rad = Math.abs(tp.x), h = H - tp.y; let changed = false, wallAt = null;
+    const kc = clamp(Math.round(h / H * (n - 1)), 0, n - 1);
+    if (step === 2) for (let k = 0; k < n; k++) { const y = H * k / (n - 1); if (y > H * 0.6 || Math.abs(y - h) > 0.04) continue;
+      if (y >= pc.floorT) wallAt = ro[k] - innerR(pc, k);
+      const rk = rad + (target[k] - target[kc]);          // 굽칼 날이 그릇 곡선을 따라가요
+      if (rk >= ro[k]) continue; const minR = easy ? target[k] : (y < pc.floorT ? 0.05 : innerR(pc, k) + 0.004);
+      const want = Math.max(rk, minR); if (want >= ro[k] - 0.0005) continue;
+      const over = ro[k] <= target[k] + 0.001; if (over) overCut = 0.6; const nr = Math.max(want, ro[k] - rate * (over ? 0.18 : 1) * dt); removed += ro[k] - nr; ro[k] = nr; changed = true;
+      if (!easy && y >= pc.floorT && ro[k] - innerR(pc, k) < 0.012) hole = '벽'; }
+    if (step === 3 && rad < fi - 0.004 && h > d) { const maxD = easy ? pc.floorT - 0.045 : pc.floorT; const nd = Math.min(maxD, h, d + rate * 0.22 * dt); if (nd > d + 0.0003) { removed += (nd - d) * 0.5; d = nd; changed = true; }
+      if (!easy && pc.floorT - d < 0.008) hole = '바닥'; }
+    if (changed) { rebuild(); if (wet0 === 'wet') dent += dt; if (wet0 === 'hard') crack += dt * 0.04;
+      lastShav += dt; if (lastShav > 0.05) { lastShav = 0; spawnShaving(V(tp.x, tp.y, 0.05), sg); } }
+    return { changed, wallAt };
+  }
+  function size() { const w = wrap.clientWidth, h = wrap.clientHeight; R3.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+  let raf = 0, lastT = performance.now();
+  function loop(t) {
+    const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
+    ang += dt * (step === 0 ? 1.4 : step === 1 ? 0.6 : 3.2); spin.rotation.y = ang; wheel.rotation.y = ang;
+    off.position.x = o; bump.position.set(Math.max(...pc.r) + 0.03, H * 0.5, 0); bump.visible = step === 0 && o > 0;
+    piece.scale.x = 1 + Math.min(0.07, dent * 0.03); piece.scale.z = 1 - Math.min(0.04, dent * 0.015);
+    const dist = Math.max(H, Rm * 2) * 2.2 + 1.1;
+    if (step === 3) { cam.position.set(0, H + dist * 0.62, dist * 0.78); cam.lookAt(0, H * 0.72, 0); } else { cam.position.set(0, H * 0.7 + dist * 0.22, dist); cam.lookAt(0, H * 0.5, 0); }
+    if (step === 0) gauge('흔들림', o / o0, o / o0 > 0.5 ? '#e2683f' : o / o0 > 0.15 ? '#e9c35a' : '#5fbf6a', o ? `흔들림 ${Math.round(o / o0 * 100)}% · 0%가 되면 중심!` : '✅ 중심 맞춤');
+    if (step === 1) gauge('고정', lumps.length / 3, '#5fbf6a', `흙덩이 ${lumps.length}/3`);
+    if (step >= 2 && tp) { const sg = tp.x < 0 ? -1 : 1; tool.position.set(tp.x, tp.y, 0.06); tool.rotation.set(0, 0, sg < 0 ? Math.PI : 0); if (step === 3) tool.rotation.set(0, 0, -Math.PI / 2.4); if (wet0 === 'hard' && down) tool.position.x += (Math.random() - 0.5) * 0.008; }
+    overCut = Math.max(0, overCut - dt);
+    if (step >= 2 && down && !finished) { const r = cut(dt);
+      if (step === 2) { const p = progress(); gauge('남은 흙 깎기', p, p > 0.85 ? '#5fbf6a' : '#e9c35a', `${Math.round(p * 100)}% 깎음${r && r.wallAt != null ? ` · 닿은 곳 벽 두께 ${Math.round(r.wallAt * 100)}mm` : ''}`); setNext(p >= 0.5); if (overCut > 0) { tip('⚠️ 점선보다 더 깎고 있어요! 벽이 얇아져요'); $('#trG', el).style.background = '#e2683f'; } else if (p > 0.97) tip('✅ 바깥을 다 깎았어요! 다음으로'); }
+      if (hole) return fail(); }
+    if (step === 3) { const rem = pc.floorT - d, mm = Math.max(0, Math.round(rem * 100)), ok = rem >= 0.035 && rem <= 0.065;
+      gauge('바닥 두께', 1 - rem / pc.floorT, rem < 0.025 ? '#e2683f' : ok ? '#5fbf6a' : '#e9c35a', `${mm}mm · ${rem < 0.025 ? '⚠️ 너무 얇아요! 그만 파요' : rem < 0.035 ? '조금 얇아요' : ok ? '✅ 알맞아요 (통통 소리)' : '아직 두꺼워요 (둔탁한 소리)'}`); setNext(rem <= 0.065, '깎기 완성 ✓'); if (ok) tip('✅ 굽이 생겼어요! 깎기 완성을 눌러요'); }
+    for (const s of shav) { s.v.y -= 2.2 * dt; s.m.position.addScaledVector(s.v, dt); s.m.rotation.y += s.rs * dt; if (s.m.position.y < 0.01) { s.m.position.y = 0.01; s.v.multiplyScalar(0.3); } s.life -= dt; }
+    for (let i = shav.length - 1; i >= 0; i--) if (shav[i].life < 0) { S3.remove(shav[i].m); shav[i].m.geometry.dispose(); shav.splice(i, 1); }
+    if (cv.width !== Math.floor(wrap.clientWidth * R3.getPixelRatio())) size();
+    R3.render(S3, cam); if (active === 'cfTrim' && $('#trCv')) raf = requestAnimationFrame(loop);
+  }
+  function stop() { cancelAnimationFrame(raf); R3.dispose(); }
+  function scoreOf() {
+    let e1 = 0, c1 = 0, e2 = 0, c2 = 0; for (let k = 0; k < n; k++) { const y = H * k / (n - 1); if (y > H * 0.6) break; const err = Math.abs(ro[k] - target[k]); if (y < pc.floorT) { e2 += err; c2++; } else { e1 += err; c1++; } }
+    const s1 = clamp(1 - (c1 ? e1 / c1 : 0) / 0.04, 0, 1), s2 = clamp(1 - (c2 ? e2 / c2 : 0) / 0.05, 0, 1), s3 = clamp(1 - Math.abs(pc.floorT - d - 0.05) / 0.04, 0, 1);
+    return Math.round(clamp(100 * (0.15 + 0.35 * s1 + 0.2 * s2 + 0.3 * s3) - Math.min(25, dent * 12), 0, 100));
+  }
+  async function fail() { finished = true; down = false;
+    updatePiece(id, p => { p.trim = { ro: ro.map(v => +v.toFixed(3)), d: +d.toFixed(3), fi: +fi.toFixed(3), score: 0, at: Date.now(), wet: wet0, hole }; p.stage = 'broken'; });
+    stop(); result(['💥 ' + hole + '이 뚫렸어요. 이 그릇은 깨져서 쓸 수 없어요.', '다음엔 두께 표시가 초록일 때 멈춰요.'], 0); }
+  async function finish() { if (finished) return; finished = true; const sc = scoreOf();
+    const msgs = [sc >= 85 ? '✨ 굽을 아주 예쁘게 깎았어요!' : sc >= 65 ? '✅ 굽깎기 완료!' : '🙂 굽을 깎았지만 두께가 조금 고르지 않아요'];
+    if (dent > 0.3) msgs.push('💧 젖었을 때 깎아서 살짝 찌그러졌어요'); if (wet0 === 'hard') msgs.push('🪨 단단할 때 깎아서 초벌 때 금이 갈 수 있어요');
+    if (pc.floorT - d > 0.065) msgs.push('바닥이 아직 두꺼워요 (무거워요)');
+    msgs.push('이제 30초 말린 뒤 🔥 가마실에서 초벌해요');
+    updatePiece(id, p => { p.trim = { ro: ro.map(v => +v.toFixed(3)), d: +d.toFixed(3), fi: +fi.toFixed(3), score: sc, at: Date.now(), wet: wet0, crack: +crack.toFixed(3), dent: +dent.toFixed(2) }; });
+    stop(); result(msgs, sc); }
+  async function result(msgs, sc) {
+    const el2 = open('cfTrim', `<div class="cf-top"><h2>🔪 굽깎기 결과</h2><button class="cf-x" data-a="x">닫기</button></div>
+      <div class="cf-body" style="justify-content:center"><div class="cf-col" style="align-items:center;max-width:520px;width:100%">
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center"><img id="trR1" alt="" style="width:170px;height:170px"><img id="trR2" alt="" style="width:170px;height:170px"></div>
+      <div class="cf-note" style="text-align:center">왼쪽: 바로 놓은 모습 · 오른쪽: 뒤집어 본 굽</div>
+      ${sc ? `<div style="font-size:30px;font-weight:800">${sc}점</div>` : ''}<div class="cf-note" style="text-align:center;font-size:14px">${msgs.join('<br>')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="cf-btn" id="trMore">다른 그릇 깎기</button><button class="cf-btn pri" id="trOk">확인</button></div></div></div>`);
+    const p2 = loadPieces().find(p => p.id === id); if (p2) { $('#trR1', el2).src = await thumb(p2, 220); $('#trR2', el2).src = await thumbBottom(p2, 220); }
+    el2.querySelector('[data-a="x"]').onclick = $('#trOk', el2).onclick = () => { closeAll(); opts.onExit && opts.onExit(); };
+    $('#trMore', el2).onclick = () => openTrim(opts);
+  }
+  window.__trimDbg = { target, cam, cv, get step() { return step; }, get d() { return d; }, get prog() { return progress(); }, H, floorT: pc.floorT };
+  enter(0); size(); raf = requestAnimationFrame(loop);
+}
+async function thumbBottom(pc, size) {          // 굽이 보이게 아래에서 본 썸네일
+  await thumb(pc, size); const m = makeMesh(pc); m.rotation.x = Math.PI; m.position.y = pc.H; thumbS.add(m); thumbR.setSize(size, size, false);
+  const D = Math.max(pc.H, Math.max(...pc.r) * 2) * 2.4 + 1; thumbC.position.set(0, pc.H + D * 0.7, D * 0.75); thumbC.lookAt(0, pc.H * 0.6, 0);
+  thumbR.render(thumbS, thumbC); const url = thumbR.domElement.toDataURL(); thumbS.remove(m); m.geometry.dispose(); m.material.dispose(); return url;
+}
+
+window.HeukCraft = { get active() { return !!active; }, openKiln, openGlaze, openTrim, wetState, makeMesh, stageOf, STAGE_NAME, kilnInfo, dryLeft, GLAZES, compose, thumb, _kiln: kilnState, _save: savePieces, _load: loadPieces, _judge: judge, _openResult: openResult };
 })();

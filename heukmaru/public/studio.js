@@ -986,7 +986,7 @@ function applyRoom(id, from) {
 }
 const ROOM_HINT = {
   studio: () => carrying ? '왼쪽 🖼 전시관 문으로 들고 가요' : '물레를 누르면 앉아서 빚어요',
-  dry: () => '빚은 기물을 말리고 굽을 깎는 방이에요 (굽깎기는 곧 열려요)',
+  dry: () => { const L = loadPieces().filter(p => HeukCraft.stageOf(p) === 'raw'); return L.length ? `굽 깎을 그릇 ${L.length}개 · 아래 🔪 버튼 (빚고 15초~2분이 깎기 좋아요)` : '빚은 그릇을 뒤집어 굽을 깎는 방이에요 · 굽을 깎아야 가마에 넣을 수 있어요'; },
   kiln: () => { const k = window.HeukCraft && HeukCraft.kilnInfo(); return k && k.phase === 'firing' ? `가마가 굽는 중이에요 · ${k.left}초 남음` : k && k.phase === 'done' ? '🔥 다 구워졌어요! 아래 버튼으로 가마를 열어요' : '마른 그릇은 초벌, 유약 바른 그릇은 재벌해요 · 아래 🔥 버튼'; },
   glaze: () => '초벌한 그릇을 꾸미고 유약에 담가요 · 아래 🎨 버튼',
   gallery: () => carrying ? '빛나는 빈 받침대를 눌러 작품을 놓아요' : '받침대를 누르면 작품 정보를 볼 수 있어요'
@@ -1048,7 +1048,7 @@ function placeOn(i) {
 }
 function putOnTable() {
   if (!carrying) return; const list = loadPieces(), it = list.find(o => o.id === carrying.id); if (it) it.place = 'table'; savePieces(list);
-  carrying = null; renderMyPieces(); updateDock(); setHint('물레실 긴 작업대에 올려뒀어요');
+  carrying = null; renderMyPieces(); updateDock(); setHint('작업대에 올려뒀어요 · 15초쯤 지나면 🌬 건조실에서 굽을 깎아요');
 }
 function pieceInfo(p) {
   if (p.fixed) return setHint('선생님 작품이에요 · 전시용');
@@ -1061,11 +1061,12 @@ function updateDock() {
   const inStudio = curRoom === 'studio';
   sitBtn.hidden = !inStudio || !!carrying;
   carryBtn.hidden = !carrying || curRoom === 'gallery';
-  const soon = { dry: '굽깎기 · 곧 열려요' }[curRoom];
+  const soon = null;
   soonBtn.hidden = !soon || !!carrying; if (soon) soonBtn.textContent = soon;
-  craftBtn.hidden = !['kiln', 'glaze'].includes(curRoom) || !!carrying;
+  craftBtn.hidden = !['kiln', 'glaze', 'dry'].includes(curRoom) || !!carrying;
   if (curRoom === 'kiln') { const k = HeukCraft.kilnInfo(); craftBtn.textContent = k.phase === 'firing' ? `🔥 굽는 중 · ${k.left}초` : k.phase === 'done' ? '🔥 가마 열기!' : '🔥 가마에 넣고 굽기'; craftBtn.classList.toggle('hot', k.phase === 'done'); }
   if (curRoom === 'glaze') { craftBtn.textContent = '🎨 꾸미고 유약 바르기'; craftBtn.classList.remove('hot'); }
+  if (curRoom === 'dry') { craftBtn.textContent = '🔪 굽깎기'; craftBtn.classList.remove('hot'); }
   galleryBtn.hidden = curRoom !== 'gallery' || !carrying; 
 }
 const soonBtn = $('#soonBtn'), galleryBtn = $('#galleryBtn');
@@ -1074,6 +1075,7 @@ const craftBtn = $('#craftBtn');
 const craftExit = () => { renderGallery(); renderMyPieces(); updateDock(); setHint(ROOM_HINT[curRoom]()); };
 craftBtn.onclick = () => { goal = null; route = []; marker.visible = false;
   if (curRoom === 'kiln') HeukCraft.openKiln({ onExit: craftExit });
+  else if (curRoom === 'dry') HeukCraft.openTrim({ onExit: craftExit });
   else HeukCraft.openGlaze({ onExit: craftExit, goKiln: () => goRoom('kiln') }); };
 // 가마 알림: 다른 방에 있어도 다 구워지면 알려줘요
 { let was = HeukCraft.kilnInfo().phase; setInterval(() => { const k = HeukCraft.kilnInfo();
