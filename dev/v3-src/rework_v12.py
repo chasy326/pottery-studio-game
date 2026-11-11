@@ -32,15 +32,17 @@ function trimOn(){return window.__sosoTrim&&__sosoTrim.active;}
 function vis(){var m=document.getElementById('makeMode');return m&&m.classList.contains('show')&&window.cs3&&!trimOn()&&!cs3.isTrim;}
 /* ---- 1) 가운데 열기 / 벽 올리기: 원래 화면 그대로 확대 (카메라는 그대로) ---- */
 var Z=1,own=false;
-function zoomWant(){try{if(!vis()||cs3.view!=='front'||!cs3.centered||cs3.cut||cs3.freeMode||cs3.finishReady)return 1;if(cs3.step!==2&&cs3.step!==3)return 1;return vessel==='plate'?1.25:1.4;}catch(e){return 1}}
+function zoomWant(){try{if(!vis()||cs3.view!=='front'||cs3.cut||cs3.freeMode||cs3.finishReady)return 1;if(cs3.step===1||cs3.step===2)return 1.8;if(cs3.step===3||cs3.step===4)return 1.5;return 1;}catch(e){return 1}}
 function applyZoom(){try{var want=zoomWant();Z+=(want-Z)*.12;if(Math.abs(want-Z)<.002)Z=want;
   var mode=document.getElementById('makeMode');
   if(Z<=1.001){if(own){own=false;camera3.clearViewOffset();camera3.updateProjectionMatrix();}if(mode&&mode.style.backgroundSize){mode.style.removeProperty('background-size');mode.style.removeProperty('background-position');}return;}
   if(cs3.view!=='front'){own=false;return;}
   var el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844;camera3.clearViewOffset();camera3.updateMatrixWorld(true);
   var P=potGroup3.position,k=potGroup3.scale.x,q=new THREE.Vector3(P.x,P.y+heightScale*k*.5,P.z).project(camera3),px=Math.min(W,Math.max(0,(q.x+1)/2*W)),py=Math.min(H,Math.max(0,(1-q.y)/2*H));
-  camera3.setViewOffset(W,H,px*(1-1/Z),py*(1-1/Z),W/Z,H/Z);camera3.updateProjectionMatrix();own=true;
-  if(mode){var mr=mode.getBoundingClientRect(),cr=el.getBoundingClientRect(),ax=cr.left-mr.left+px,ay=cr.top-mr.top+py;mode.style.setProperty('background-size',(mr.width*Z).toFixed(1)+'px '+(mr.height*Z).toFixed(1)+'px','important');mode.style.setProperty('background-position',(-ax*(Z-1)).toFixed(1)+'px '+(-ay*(Z-1)).toFixed(1)+'px','important');}}catch(e){}}
+  var ty=py;try{var tb=document.querySelector('#makeMode .soso-top-exit'),hp=document.getElementById('makeHint'),top=tb?tb.getBoundingClientRect().bottom+70:140,bot=hp&&hp.getBoundingClientRect().height?hp.getBoundingClientRect().top-10:H*.8;ty=(top+bot)/2-el.getBoundingClientRect().top;}catch(e){}
+  var k2=Math.min(1,(Z-1)/.4),dy=(ty-py)*k2,ox=Math.min(W-W/Z,Math.max(0,px*(1-1/Z))),oy=Math.min(H-H/Z,Math.max(0,py-(py+dy)/Z));
+  camera3.setViewOffset(W,H,ox,oy,W/Z,H/Z);camera3.updateProjectionMatrix();own=true;
+  if(mode){var mr=mode.getBoundingClientRect(),cr=el.getBoundingClientRect(),cl=cr.left-mr.left,ct=cr.top-mr.top,Ox=cl+ox-cl/Z,Oy=ct+oy-ct/Z;mode.style.setProperty('background-size',(mr.width*Z).toFixed(1)+'px '+(mr.height*Z).toFixed(1)+'px','important');mode.style.setProperty('background-position',(-Ox*Z).toFixed(1)+'px '+(-Oy*Z).toFixed(1)+'px','important');}}catch(e){}}
 window.__sosoZoom=function(){return Z;};
 /* ---- 2) 자유 성형: 늘리기 / 줄이기 ---- */
 window.__sosoFreeDir=1;
