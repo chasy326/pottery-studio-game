@@ -40,7 +40,7 @@ try{craftRigCfg3.grow=1.05;}catch(e){}
 /* side view: a splash tub under the wheel head, stand hidden, so the wheel never floats */
 var tub=null,stem=null;
 function sideDeco(){requestAnimationFrame(sideDeco);try{if(!wheelGroup3)return;var m=document.getElementById('makeMode'),on=m&&m.classList.contains('show')&&window.cs3&&cs3.view==='side'&&!cs3.isTrim&&!(window.__sosoTrim&&__sosoTrim.active);
-  if(!tub){var G=new THREE.Color(0xa9c99b).convertSRGBToLinear(),G2=new THREE.Color(0xd3e6c8).convertSRGBToLinear();tub=new THREE.Group();tub.name='soso_tub';
+  if(!tub){var G=new THREE.Color(0xe9dfcf).convertSRGBToLinear(),G2=new THREE.Color(0xfbf6ec).convertSRGBToLinear();tub=new THREE.Group();tub.name='soso_tub';
     var wall=new THREE.Mesh(new THREE.CylinderGeometry(1.42,1.30,1.8,72,1,true),new THREE.MeshStandardMaterial({color:G,roughness:.7,side:THREE.DoubleSide}));wall.position.y=-.03-.9;tub.add(wall);
     var lip=new THREE.Mesh(new THREE.TorusGeometry(1.42,.055,10,72),new THREE.MeshStandardMaterial({color:G2,roughness:.55}));lip.rotation.x=Math.PI/2;lip.position.y=-.03;tub.add(lip);
     wheelGroup3.add(tub);wheelGroup3.children.forEach(function(c){if(c.geometry&&c.geometry.parameters&&Math.abs((c.geometry.parameters.height||0)-.63)<.001)stem=c;});}

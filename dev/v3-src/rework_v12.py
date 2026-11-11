@@ -11,7 +11,7 @@ rep("if(f.y<0||f.y>s2.H*1.02)return;","if(f.y<-.15||f.y>s2.H+.15)return;")
 extra=r'''<style id="soso-v12-style">
 #sosoFreeBtns{position:absolute;z-index:18;left:50%;bottom:190px;transform:translateX(-50%);display:none;flex-direction:row;gap:34px;align-items:flex-end}
 #sosoFreeBtns.show{display:flex}
-#sosoFreeBtns .fb{all:unset;position:relative;display:block;width:52px;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:center}
+#sosoFreeBtns .fb{all:unset;position:relative;display:block;width:64px;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:center}
 #sosoFreeBtns .fb .cb{position:relative;display:block;width:50px;height:52px;margin:0 auto}
 #sosoFreeBtns .fb .base{position:absolute;left:0;right:0;bottom:0;height:42px;border-radius:50%;background:linear-gradient(#f3cf9f,#d9a877);border:2.5px solid #5a2e16;box-sizing:border-box}
 #sosoFreeBtns .fb .top{position:absolute;left:3px;right:3px;top:0;height:40px;border-radius:50%;border:2.5px solid #5a2e16;box-sizing:border-box;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 -6px 0 rgba(0,0,0,.16);transition:top .1s}
@@ -50,17 +50,17 @@ var box=null,ring=null,wasFree=false;
 var ICO={plus:'<svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><path d="M12 4v16M4 12h16" stroke="#5a2e16" stroke-width="1.2" stroke-linecap="round" opacity=".25"/></svg>',minus:'<svg viewBox="0 0 24 24"><path d="M4 12h16" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg>'};
 function setDir(d){window.__sosoFreeDir=d;if(!box)return;box.querySelector('.plus').classList.toggle('on',d===1);box.querySelector('.minus').classList.toggle('on',d===-1);try{if(navigator.vibrate)navigator.vibrate(8);}catch(e){}}
 function ensure(){var m=document.getElementById('makeMode');if(!m)return;if(!box){box=document.createElement('div');box.id='sosoFreeBtns';
-  box.innerHTML='<button type="button" class="fb plus on" aria-label="늘리기"><span class="cb"><span class="base"></span><span class="top">'+ICO.plus+'</span></span><span class="lb">늘리기</span></button><button type="button" class="fb minus" aria-label="줄이기"><span class="cb"><span class="base"></span><span class="top">'+ICO.minus+'</span></span><span class="lb">줄이기</span></button>';
+  box.innerHTML='<button type="button" class="fb plus on" aria-label="부풀리기"><span class="cb"><span class="base"></span><span class="top">'+ICO.plus+'</span></span><span class="lb">부풀리기</span></button><button type="button" class="fb minus" aria-label="조이기"><span class="cb"><span class="base"></span><span class="top">'+ICO.minus+'</span></span><span class="lb">조이기</span></button>';
   m.appendChild(box);['pointerdown','pointermove','pointerup','touchstart','touchmove','mousedown'].forEach(function(ev){box.addEventListener(ev,function(e){e.stopPropagation();},{passive:true});});
   box.querySelector('.plus').addEventListener('click',function(e){e.stopPropagation();setDir(1);});box.querySelector('.minus').addEventListener('click',function(e){e.stopPropagation();setDir(-1);});}
   box.querySelectorAll('button').forEach(function(b){if(/soso-candy/.test(b.className))b.className=b.className.split(/\s+/).filter(function(c){return c.indexOf('soso-candy')!==0;}).join(' ');});}
-function ringUpdate(free){try{if(!ring){ring=new THREE.Mesh(new THREE.TorusGeometry(1,.022,8,72),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthTest:false,depthWrite:false}));ring.rotation.x=Math.PI/2;ring.renderOrder=9;}
-  if(ring.parent!==potGroup3)potGroup3.add(ring);var age=performance.now()-(window.__sosoFreeAt||0),on=free&&age<260&&dragging;ring.visible=on;if(!on)return;
-  var st=cs3.renderState||craftTargetState3(),t=window.__sosoFreeT||.5,r=cInterp(st.r,t)+.012;ring.position.y=st.H*t;ring.scale.set(r,r,r);ring.material.color.setHex(window.__sosoFreeDir===-1?0xffd0d6:0xffffff);}catch(e){}}
+function ringUpdate(free){try{if(!ring){ring=new THREE.Mesh(new THREE.TorusGeometry(1,.03,8,72),new THREE.MeshBasicMaterial({color:0xffd34d,transparent:true,opacity:.95,depthTest:false,depthWrite:false}));ring.rotation.x=Math.PI/2;ring.renderOrder=9;}
+  if(ring.parent!==potGroup3)potGroup3.add(ring);var age=performance.now()-(window.__sosoFreeAt||0),on=free&&age<450;ring.visible=on;if(!on)return;
+  var st=cs3.renderState||craftTargetState3(),t=window.__sosoFreeT||.5,r=cInterp(st.r,t)+.012;ring.position.y=st.H*t;ring.scale.set(r,r,r);ring.material.color.setHex(0xffd34d);}catch(e){}}
 var hintEl=null;
 function loop(){requestAnimationFrame(loop);try{ensure();if(!box)return;var free=vis()&&cs3.freeMode&&!cs3.cut&&cs3.centered;
   if(free&&!wasFree)setDir(1);wasFree=free;box.classList.toggle('show',!!free);if(free){var mh=document.getElementById('makeHint'),mm=document.getElementById('makeMode');if(mh&&mm){var hr=mh.getBoundingClientRect();if(hr.height>0){var bb=Math.round(mm.getBoundingClientRect().bottom-hr.top+20)+'px';if(box.style.bottom!==bb)box.style.bottom=bb;}}}ringUpdate(free);
-  if(free){hintEl=hintEl||document.getElementById('makeHint');var tx=window.__sosoFreeDir===-1?'벽을 위아래로 문지르면 안으로 들어가요':'벽을 위아래로 문지르면 바깥으로 늘어나요';if(hintEl&&hintEl.textContent!==tx)hintEl.textContent=tx;}
+  if(free){hintEl=hintEl||document.getElementById('makeHint');var tx=window.__sosoFreeDir===-1?'조이기: 원하는 높이를 문지르면 안으로 들어가요':'부풀리기: 원하는 높이를 문지르면 볼록해져요';if(hintEl&&hintEl.textContent!==tx)hintEl.textContent=tx;}
 }catch(e){}}
 requestAnimationFrame(loop);
 var wrapped=null;function wrap(){try{if(!renderer3||wrapped===renderer3)return;wrapped=renderer3;var _rend=renderer3.render;renderer3.render=function(){applyZoom();return _rend.apply(this,arguments);};}catch(e){}}setInterval(wrap,200);

@@ -49,7 +49,7 @@ var camT=null,camP=null,camFix=null;
 function sideCam(snap){if(!window.cs3||cs3.view!=='side'||trimOn()||cs3.isTrim)return;try{var P=potGroup3.position,k=potGroup3.scale.x,el=renderer3.domElement,W=el.clientWidth||390,H=el.clientHeight||844,aspect=W/H,tanH=Math.tan(THREE.MathUtils.degToRad(camera3.fov/2));
   if(!camFix){var rNow=Math.max.apply(null,radiusProfile),hNow=heightScale,T=null;try{if(CSPECS[vessel])T=cSpecState(vessel);}catch(e){}
     var R=Math.max(.18,rNow*1.12);try{R=Math.min(R,CCFG.capR*1.05);}catch(e){}R*=k;var h=Math.max(.2,hNow)*1.15*k;
-    var ELV=THREE.MathUtils.degToRad(11),D=Math.max((R*2*1.5)/(2*tanH*aspect),(h*2.2)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.45};}
+    var ELV=THREE.MathUtils.degToRad(18),D=Math.max((R*2*1.3)/(2*tanH*aspect),(h*1.75)/(2*tanH));camFix={D:D,ELV:ELV,ty:h*.42};}
   var tgt=new THREE.Vector3(P.x,P.y+camFix.ty,P.z),pos=new THREE.Vector3(tgt.x,tgt.y+camFix.D*Math.sin(camFix.ELV),tgt.z+camFix.D*Math.cos(camFix.ELV));
   if(snap||!camT){camT=tgt.clone();camP=pos.clone();}else{camT.lerp(tgt,.08);camP.lerp(pos,.08);}
   try{wheelGroup3.visible=true;}catch(e){}camera3.position.copy(camP);camera3.up.set(0,1,0);camera3.lookAt(camT);camera3.zoom=1;camera3.setViewOffset(W,H,0,Math.round(H*.07),W,H);camera3.updateProjectionMatrix();camera3.updateMatrixWorld(true);}catch(e){}}
