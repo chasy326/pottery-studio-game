@@ -109,10 +109,10 @@ function make(kind = 'A') {
     const bob = Math.abs(Math.sin(phase)) * 0.024 * spd;
     hips.position.y = lerp(hips.position.y, sit ? 0.17 : 0.27 + bob, k);
     hips.rotation.y = Math.sin(phase) * 0.1 * spd; hips.rotation.z = Math.cos(phase) * 0.035 * spd;
-    hips.rotation.x = lerp(hips.rotation.x, bowP ? 0.85 : sit ? -0.04 : 0.05 * spd, k * 0.6);
+    hips.rotation.x = lerp(hips.rotation.x, bowP ? 0.42 : sit ? -0.04 : 0.05 * spd, k * 0.6);
     torso.scale.y = 1 + Math.sin(t * 2.2) * 0.012;
     head.rotation.y = lerp(head.rotation.y, -hips.rotation.y * 0.8 + (pose === 'idle' && !moving ? Math.sin(t * 0.5) * 0.18 : 0), k * 0.5);
-    head.rotation.x = lerp(head.rotation.x, bowP ? 0.3 : carry ? 0.12 : Math.sin(t * 0.7) * 0.03, k * 0.5);
+    head.rotation.x = lerp(head.rotation.x, bowP ? 0.25 : carry ? 0.12 : Math.sin(t * 0.7) * 0.03, k * 0.5);
     head.rotation.z = lerp(head.rotation.z, Math.cos(phase) * 0.04 * spd, k * 0.5);
     legs.forEach(({ hp, kn, s }) => {
       const a = sit ? -1.45 : sw * s * 0.6, kb = sit ? 1.5 : Math.max(0, -Math.sin(phase + (s > 0 ? 0 : Math.PI)) * 0.7 * spd);

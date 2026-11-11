@@ -69,3 +69,35 @@ html,body{margin:0;height:100%;overflow:hidden;background:#2b2724;font-family:"P
 html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 input,textarea{-webkit-user-select:text;user-select:text}
 canvas{-webkit-touch-callout:none}
+
+/* 로딩 */
+#loading{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#2b2724;color:#f3ece2;transition:opacity .5s}
+#loading.done{opacity:0;pointer-events:none}
+#loading .ld{text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}
+#loading .mark{width:54px;height:54px;font-size:26px;display:grid;place-items:center;border-radius:16px;background:#f3ece2;color:#2b2724;font-weight:800}
+#loading b{font-size:20px}#loading p{margin:0;font-size:13px;color:#cbbfae}
+#loading i{width:120px;height:4px;border-radius:4px;background:#ffffff22;overflow:hidden;position:relative}
+#loading i::after{content:'';position:absolute;left:-40%;width:40%;height:100%;background:#e9c35a;border-radius:4px;animation:ld 1.1s ease-in-out infinite}
+@keyframes ld{to{left:100%}}
+/* 이름표 */
+.nametag{position:fixed;left:0;top:0;transform:translate(-50%,-100%);z-index:4;pointer-events:none;background:#1f1c1acc;color:#f6efe4;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;border:1px solid #ffffff22}
+.nametag em{font-style:normal;color:#e9c35a;margin-right:4px}
+/* 동작 버튼 */
+.pill.act{padding:8px 12px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:18px;line-height:1}
+.pill.act small{font-size:10px;opacity:.8;margin:0}
+.pill.act.on{background:#e9c35a;color:#2b2420;border-color:#e9c35a}
+.myname{margin-top:14px;font-size:13px;color:#7a6d60;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+.myname b{color:#2f2925;font-size:15px}
+.myname .mini{background:#2f2925;color:#f6efe4;border:0}
+@media (max-width:700px){.pill.act{padding:7px 10px;font-size:16px}}
+.pill{white-space:nowrap}
+@media (max-width:700px){
+  .pickCard{width:min(360px,94vw);box-sizing:border-box}
+  .pickRow{gap:8px}
+  .who{flex:1 1 0;min-width:0;padding:10px 6px 8px}
+  .who img{height:auto;width:100%;max-height:30vh;object-fit:contain}
+  .dock{gap:6px;padding:7px;max-width:94vw}
+  .dock .pill{padding:10px 14px;font-size:13px}
+  .dock .pill.act{padding:6px 9px;font-size:15px}
+  .rooms{bottom:calc(84px + env(safe-area-inset-bottom))!important}
+}
