@@ -62,3 +62,5 @@ html,body{margin:0;height:100%;overflow:hidden;background:#2b2724;font-family:"P
 @media (max-width:700px){.rooms{top:auto!important;bottom:calc(92px + env(safe-area-inset-bottom))}}
 #throwMode .tw-chips{margin-top:env(safe-area-inset-top)}
 #throwMode .tw-dock{margin-bottom:env(safe-area-inset-bottom)}
+
+#craftBtn.hot{background:#e9c35a;color:#2b2420;animation:hotp 1s ease-in-out infinite alternate}@keyframes hotp{to{box-shadow:0 0 0 6px #e9c35a55}}

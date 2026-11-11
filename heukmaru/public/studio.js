@@ -718,7 +718,8 @@ function npcRelocate(n, now) {          // 안 보일 때만: 다른 자리(가�
   n.x = n.spot.x; n.z = n.spot.z; n.until = now + 9000 + Math.random() * 12000;
 }
 NPCS.forEach(n => { const all = ROOMS[n.room].spots.filter(sp => !NPCS.some(o => o !== n && o.spot === sp)), pref = all.filter(sp => sp.kind === n.likes), f = pref.length ? pref : all; n.spot = f[n.seed % f.length]; n.x = n.spot.x; n.z = n.spot.z; n.until = performance.now() + 8000 + n.seed * 3000; });
-const roomVisible = id => id === curRoom && !(window.HeukThrow && HeukThrow.active) && !fading;
+const craftOn = () => !!(window.HeukCraft && HeukCraft.active);
+const roomVisible = id => id === curRoom && !(window.HeukThrow && HeukThrow.active) && !craftOn() && !fading;
 function peopleHere() { if (!SHOW_NPC) return []; return NPCS.filter(n => n.room === curRoom).concat(partner.room === curRoom ? [partner] : []); }   // 지금 방에 보이는 손님·단짝
 // 보는 물건이 화면 오른쪽에 있으면 오른쪽을 보게 뒤집기
 function lookFlip(n) { if (!n.spot || !n.face) return false; const ox = Math.sin(n.spot.face), oz = Math.cos(n.spot.face), sx = ox * CAM_RIGHT.x + oz * CAM_RIGHT.z; return sx > 0.05; }
@@ -863,7 +864,7 @@ function stepMove(dx, dz, dt) {
 }
 
 /* ---------- 입력 ---------- */
-const uiBusy = () => !document.querySelector('#pick').hidden || (window.HeukThrow && window.HeukThrow.active);
+const uiBusy = () => !document.querySelector('#pick').hidden || (window.HeukThrow && window.HeukThrow.active) || craftOn();
 addEventListener('keydown', e => {
   if (uiBusy()) { keys.clear(); return; }
   const k = e.key.toLowerCase();
@@ -986,8 +987,8 @@ function applyRoom(id, from) {
 const ROOM_HINT = {
   studio: () => carrying ? '왼쪽 🖼 전시관 문으로 들고 가요' : '물레를 누르면 앉아서 빚어요',
   dry: () => '빚은 기물을 말리고 굽을 깎는 방이에요 (굽깎기는 곧 열려요)',
-  kiln: () => '초벌·재벌을 굽는 방이에요 (가마 굽기는 곧 열려요)',
-  glaze: () => '유약을 골라 바르는 방이에요 (유약 바르기는 곧 열려요)',
+  kiln: () => { const k = window.HeukCraft && HeukCraft.kilnInfo(); return k && k.phase === 'firing' ? `가마가 굽는 중이에요 · ${k.left}초 남음` : k && k.phase === 'done' ? '🔥 다 구워졌어요! 아래 버튼으로 가마를 열어요' : '마른 그릇은 초벌, 유약 바른 그릇은 재벌해요 · 아래 🔥 버튼'; },
+  glaze: () => '초벌한 그릇을 꾸미고 유약에 담가요 · 아래 🎨 버튼',
   gallery: () => carrying ? '빛나는 빈 받침대를 눌러 작품을 놓아요' : '받침대를 누르면 작품 정보를 볼 수 있어요'
 };
 function goRoom(id) {
@@ -1008,8 +1009,9 @@ function checkDoors() {
 /* ---------- 작품 들고 다니기 · 전시 ---------- */
 let carrying = null, pendingPlace = null, cheerUntil = 0;
 function loadPieces() { try { return JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); } catch { return []; } }
-function savePieces(list) { let k = 0; list = list.filter(pc => pc.place === 'gallery' || pc.place === 'carry' || k++ < 30); try { localStorage.setItem('heukmaru-pieces', JSON.stringify(list)); } catch {} }
+function savePieces(list) { let k = 0; list = list.filter(pc => pc.place === 'gallery' || pc.place === 'carry' || pc.stage === 'bisque' || pc.stage === 'glazed' || k++ < 30); try { localStorage.setItem('heukmaru-pieces', JSON.stringify(list)); } catch {} }
 function pieceMesh(pc, scale) {
+  if (window.HeukCraft) return HeukCraft.makeMesh(pc, scale);
   const pts = [new THREE.Vector2(0.001, 0)], n = pc.r.length, H = pc.H;
   for (let k = 0; k < n; k++) pts.push(new THREE.Vector2(pc.r[k], H * k / (n - 1)));
   for (let k = n - 1; k >= 0; k--) { const y = H * k / (n - 1); if (y < pc.floorT) break; pts.push(new THREE.Vector2(Math.max(0.02, pc.r[k] - pc.t[k]), y)); }
@@ -1051,7 +1053,7 @@ function putOnTable() {
 function pieceInfo(p) {
   if (p.fixed) return setHint('선생님 작품이에요 · 전시용');
   if (!p.piece) return setHint(carrying ? '여기에 놓으려면 받침대를 눌러요' : '빈 받침대예요. 물레실에서 빚어 들고 와요');
-  const pc = p.piece; setHint(`${pc.clayName || ''} ${pc.name} · ${'★'.repeat(pc.stars || 1)} ${pc.score || ''}점`);
+  const pc = p.piece; setHint(`${pc.clayName || ''} ${pc.name} · ${'★'.repeat(pc.stars || 1)} ${pc.score || ''}점 · ${HeukCraft.STAGE_NAME[HeukCraft.stageOf(pc)]}${pc.result && pc.result.yo ? ' · ✨요변' : ''}`);
 }
 /* 하단 버튼: 방마다 다름 */
 const carryBtn = $('#carryBtn');
@@ -1059,12 +1061,24 @@ function updateDock() {
   const inStudio = curRoom === 'studio';
   sitBtn.hidden = !inStudio || !!carrying;
   carryBtn.hidden = !carrying || curRoom === 'gallery';
-  const soon = { dry: '굽깎기 · 곧 열려요', kiln: '가마 굽기 · 곧 열려요', glaze: '유약 바르기 · 곧 열려요' }[curRoom];
+  const soon = { dry: '굽깎기 · 곧 열려요' }[curRoom];
   soonBtn.hidden = !soon || !!carrying; if (soon) soonBtn.textContent = soon;
+  craftBtn.hidden = !['kiln', 'glaze'].includes(curRoom) || !!carrying;
+  if (curRoom === 'kiln') { const k = HeukCraft.kilnInfo(); craftBtn.textContent = k.phase === 'firing' ? `🔥 굽는 중 · ${k.left}초` : k.phase === 'done' ? '🔥 가마 열기!' : '🔥 가마에 넣고 굽기'; craftBtn.classList.toggle('hot', k.phase === 'done'); }
+  if (curRoom === 'glaze') { craftBtn.textContent = '🎨 꾸미고 유약 바르기'; craftBtn.classList.remove('hot'); }
   galleryBtn.hidden = curRoom !== 'gallery' || !carrying; 
 }
 const soonBtn = $('#soonBtn'), galleryBtn = $('#galleryBtn');
 soonBtn.onclick = () => setHint('이 방 활동은 곧 열려요! 지금은 둘러볼 수 있어요');
+const craftBtn = $('#craftBtn');
+const craftExit = () => { renderGallery(); renderMyPieces(); updateDock(); setHint(ROOM_HINT[curRoom]()); };
+craftBtn.onclick = () => { goal = null; route = []; marker.visible = false;
+  if (curRoom === 'kiln') HeukCraft.openKiln({ onExit: craftExit });
+  else HeukCraft.openGlaze({ onExit: craftExit, goKiln: () => goRoom('kiln') }); };
+// 가마 알림: 다른 방에 있어도 다 구워지면 알려줘요
+{ let was = HeukCraft.kilnInfo().phase; setInterval(() => { const k = HeukCraft.kilnInfo();
+  if (was === 'firing' && k.phase === 'done' && !craftOn()) setHint('🔥 가마가 다 구워졌어요! 가마실에서 열어 보세요');
+  was = k.phase; if (curRoom === 'kiln' && !craftOn()) updateDock(); }, 1000); }
 carryBtn.onclick = () => { if (curRoom === 'studio') putOnTable(); else setHint('작업대는 물레실에 있어요. 🖼 전시관이나 🏺 물레실로 가요'); };
 galleryBtn.onclick = () => { let i = -1, best = 1e9; PEDESTALS.forEach((p, k) => { if (p.fixed || p.piece) return; const d = Math.hypot(p.stand.x - player.position.x, p.stand.z - player.position.z); if (d < best) { best = d; i = k; } }); if (i < 0) return setHint('받침대가 꽉 찼어요'); walkToPedestal(i); };
 function walkToPedestal(i) { const p = PEDESTALS[i]; sitTarget = null; walkTo(p.stand.x, p.stand.z); pendingPlace = i; showMarker(V(p.stand.x, 0, p.stand.z)); }
@@ -1076,7 +1090,7 @@ function arrivePending() {
 /* ---------- 루프 ---------- */
 const clock = new THREE.Clock();
 function frame() {
-  if (window.HeukThrow && window.HeukThrow.active) { clock.getDelta(); requestAnimationFrame(frame); return; }
+  if ((window.HeukThrow && window.HeukThrow.active) || craftOn()) { clock.getDelta(); requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05), now = performance.now();
   if (!window.__freeze) updateMove(dt);
   afterMove(dt, now);
@@ -1143,17 +1157,12 @@ function renderMyPieces() {
   let list = []; try { list = JSON.parse(localStorage.getItem('heukmaru-pieces') || '[]'); } catch {}
   list = list.filter(pc => !pc.place || pc.place === 'table');
   list.slice(0, 8).forEach((pc, i) => {
-    const pts = [new THREE.Vector2(0.001, 0)], n = pc.r.length, H = pc.H;
-    for (let k = 0; k < n; k++) pts.push(new THREE.Vector2(pc.r[k], H * k / (n - 1)));
-    for (let k = n - 1; k >= 0; k--) { const y = H * k / (n - 1); if (y < pc.floorT) break; pts.push(new THREE.Vector2(Math.max(0.02, pc.r[k] - pc.t[k]), y)); }
-    pts.push(new THREE.Vector2(0.001, pc.floorT));
-    const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 32), M(pc.color || '#cfa47c', 0.85)); m.material.side = THREE.DoubleSide;
-    m.castShadow = true; m.scale.setScalar(0.2); m.position.set(-1.2 + i * 0.42, 0.76, 0.78); myPieces.add(m);
+    const m = pieceMesh(pc, 0.2); m.position.set(-1.2 + i * 0.42, 0.76, 0.78); myPieces.add(m);
   });
 }
 renderMyPieces(); addEventListener('heukmaru-pieces', renderMyPieces);
 // 들고 있던 작품이 있으면 다시 들기(새로고침 대비)
 { const c = loadPieces().find(o => o.place === 'carry'); if (c) carrying = c; }
 renderGallery(); applyRoom('studio', null); player.position.set(-2.6, 0, 2.4); doorLock = null; setHint('바닥을 누르거나 WASD로 걸어요');
-window.__heukmaru = { camera, setGoalDirect(x, z) { goal = { x, z }; route = []; }, findPath, walkTo, sim(sec, keyset) { const k0 = [...keys]; keys.clear(); (keyset || []).forEach(k => keys.add(k)); window.__freeze = true; for (let t = 0; t < sec; t += 1 / 60) updateMove(1 / 60); keys.clear(); k0.forEach(k => keys.add(k)); window.__freeze = false; }, get sitTarget(){return sitTarget}, stepMove, freeSpotNear, penetration, get partner(){return partner}, goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
+window.__heukmaru = { craftBtn, camera, setGoalDirect(x, z) { goal = { x, z }; route = []; }, findPath, walkTo, sim(sec, keyset) { const k0 = [...keys]; keys.clear(); (keyset || []).forEach(k => keys.add(k)); window.__freeze = true; for (let t = 0; t < sec; t += 1 / 60) updateMove(1 / 60); keys.clear(); k0.forEach(k => keys.add(k)); window.__freeze = false; }, get sitTarget(){return sitTarget}, stepMove, freeSpotNear, penetration, get partner(){return partner}, goRoom, applyRoom, get curRoom(){return curRoom}, get carrying(){return carrying}, startCarry, placeOn, walkToPedestal, PEDESTALS, NPCS, ROOMS, get goal(){return goal}, get route(){return route}, get sitting(){return sitting}, player, teacher, WHEELS, trySit, stand, seatOn, standUp, colliders, blocked, setView: v => { viewTarget = viewSize = v; } };
 })();

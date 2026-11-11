@@ -603,7 +603,7 @@ function finishPiece() {
     물: '물을 너무 적게 혹은 많이 썼어요. 손이 미끄러울 만큼만!'
   };
   const say = stars === 3 ? '와, 이건 그대로 가마에 넣어도 되겠어요!' : COMMENT[worst];
-  const piece = { id: Date.now(), vessel: st.vessel, clay: st.clay, clayName: CLAYS[st.clay].name, color: CLAYS[st.clay].dry, name: VESSELS[st.vessel].name, mode: st.mode, stars, score: Math.round(total * 100), H: +st.H.toFixed(3), r: Array.from(st.r, v => +v.toFixed(3)), t: Array.from(st.t, v => +v.toFixed(3)), floorT: +st.floorT.toFixed(3), at: new Date().toISOString() };
+  const piece = { id: Date.now(), vessel: st.vessel, clay: st.clay, clayName: CLAYS[st.clay].name, color: CLAYS[st.clay].dry, name: VESSELS[st.vessel].name, mode: st.mode, stars, score: Math.round(total * 100), H: +st.H.toFixed(3), r: Array.from(st.r, v => +v.toFixed(3)), t: Array.from(st.t, v => +v.toFixed(3)), floorT: +st.floorT.toFixed(3), at: new Date().toISOString(), stage: 'raw', madeAt: Date.now() };
   st.lastPiece = piece;
   showResult(`<h2>${VESSELS[st.vessel].name} 완성!</h2><div class="tw-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div><p>${CLAYS[st.clay].name} · ${st.mode === 'easy' ? '쉬움' : '실전'} 모드 · ${Math.round(total * 100)}점</p>
     <div class="tw-scores">${Object.keys(sc).map(k => `<div><span>${k}</span><b>${Math.round(sc[k] * 100)}</b></div>`).join('')}</div>
@@ -614,7 +614,7 @@ function showResult(html) { const v = $('[data-v="result"]'); v.querySelector('.
 
 /* ---------- 버튼 ---------- */
 // 전시된 작품은 지우지 않고, 나머지는 최근 30개까지만 보관
-function trimPieces(list) { let k = 0; return list.filter(pc => pc.place === 'gallery' || pc.place === 'carry' || k++ < 30); }
+function trimPieces(list) { let k = 0; return list.filter(pc => pc.place === 'gallery' || pc.place === 'carry' || pc.stage === 'bisque' || pc.stage === 'glazed' || k++ < 30); }
 function act(a) {
   if (a === 'water') {
     if (STEPS[st.step].key === 'attach' || STEPS[st.step].key === 'wire') return warn('지금은 물이 필요 없어요', 1000);
