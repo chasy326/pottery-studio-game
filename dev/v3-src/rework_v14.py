@@ -48,7 +48,7 @@ extra=r'''<style id="soso-v14-style">
 </style>
 <script id="soso-v14">
 (function(){
-var HAND='__HAND__';
+var HAND='__HAND__';window.__sosoHandSrc=HAND;
 var KEY='soso-easy-v1',easy=true;try{easy=localStorage.getItem(KEY)!=='0';}catch(e){}
 window.__sosoEasy=function(){return easy;};
 function $(id){return document.getElementById(id);}

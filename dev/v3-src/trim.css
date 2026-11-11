@@ -76,3 +76,38 @@
 #sosoTrimUR .tu-b svg{width:30px;height:30px}
 #sosoTrimUR .tu-b.off{background:radial-gradient(circle at 35% 30%,#b9c0b8,#8d978d 70%);box-shadow:0 4px 0 #6f776f;opacity:.75}
 #sosoTrimUR .tu-b:active{transform:translateY(2px);box-shadow:0 2px 0 #23432d}
+#sosoPaintPanel{position:absolute;z-index:46;left:0;right:0;bottom:0;display:none;flex-direction:column;gap:7px;padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:#fff8e8f4;border-top:1px solid #d6c09c;box-shadow:0 -4px 12px #4b34201c;font-family:inherit;color:#5b3a1f}
+#sosoPaintPanel.show{display:flex}
+#sosoPaintPanel .pp-hint{font-size:15px;text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#sosoPaintPanel .pp-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#sosoPaintPanel button{all:unset;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#sosoPaintPanel .pt{height:56px;border-radius:15px;border:2px solid #e2cda8;background:linear-gradient(180deg,#fffdf6,#f6ead2);box-shadow:0 3px 0 #c9ab7f;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px}
+#sosoPaintPanel .pt i{font-style:normal;font-size:21px;line-height:1.1}
+#sosoPaintPanel .pt.on{border-color:#e97c31;background:linear-gradient(180deg,#fff3e2,#ffdcb6);box-shadow:0 3px 0 #b8581c;transform:translateY(-1px)}
+#sosoPaintPanel .pp-cols{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 2px 3px;scrollbar-width:none}
+#sosoPaintPanel .pp-cols::-webkit-scrollbar{display:none}
+#sosoPaintPanel .pc{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11px;position:relative}
+#sosoPaintPanel .pc i{display:block;width:28px;height:28px;border-radius:50%;background:var(--c);border:2.5px solid #fff;box-shadow:0 0 0 1px #d9c3a0}
+#sosoPaintPanel .pc.on i{box-shadow:0 0 0 3px #e97c31}
+#sosoPaintPanel .pc.custom i{background:conic-gradient(#e44,#ee4,#4e4,#4ee,#44e,#e4e,#e44)}
+#sosoPaintPanel .pc.custom.on i{background:var(--c);}
+#sosoPaintPanel .pc.custom input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+#sosoPaintPanel .sep{flex:0 0 1px;height:24px;background:#e2c99a}
+#sosoPaintPanel .pp-stamps{display:none;gap:8px;justify-content:center}
+#sosoPaintPanel.stampmode .pp-stamps{display:flex}
+#sosoPaintPanel .ps{width:44px;height:40px;border-radius:12px;border:2px solid #e2cda8;background:#fffdf6;display:flex;align-items:center;justify-content:center;font-size:20px}
+#sosoPaintPanel .ps.on{border-color:#e97c31;background:#fff1e2}
+#sosoPaintPanel .pp-row{display:flex;align-items:center;gap:8px}
+#sosoPaintPanel .pp-size{display:flex;gap:4px;background:#fffdf6;border:1px solid #e2cda8;border-radius:14px;padding:4px 6px}
+#sosoPaintPanel .pz{width:38px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+#sosoPaintPanel .pz b{display:block;border-radius:50%;background:#6b4a2c}
+#sosoPaintPanel .pz.on{background:#ffe6cc;box-shadow:inset 0 0 0 2px #e97c31}
+#sosoPaintPanel .pp-done{margin-left:auto;height:46px;padding:0 16px;border-radius:16px;border:2px solid #8a4416;background:linear-gradient(180deg,#f29a4a,#c9661f);color:#fff;font-size:18px;text-shadow:0 1px 0 #6b3510;box-shadow:0 4px 0 #8a4416;display:flex;align-items:center}
+#sosoPaintUR{position:absolute;z-index:46;left:10px;top:72px;display:none;gap:8px}
+#sosoPaintUR.show{display:flex}
+#sosoPaintUR .tu-b{all:unset;box-sizing:border-box;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 30%,#5aa866,#2e6b38 70%);border:2px solid #f8f0dc;box-shadow:0 4px 0 #23432d;cursor:pointer}
+#sosoPaintUR .tu-b svg{width:30px;height:30px}
+#sosoPaintUR .tu-b.off{background:radial-gradient(circle at 35% 30%,#b9c0b8,#8d978d 70%);box-shadow:0 4px 0 #6f776f;opacity:.75}
+#sosoPaintHand{position:absolute;z-index:47;width:58px;height:auto;pointer-events:none;display:none;transform-origin:9px 1px;filter:drop-shadow(0 3px 3px rgba(60,30,60,.3))}
+#sosoTrimResult .tr-skip{all:unset;box-sizing:border-box;display:block;width:100%;margin-top:8px;padding:10px;text-align:center;font-size:16px;color:#8a6a48;cursor:pointer}
+#sosoGallery .gl-thumb{display:block;width:100%;height:auto;border-radius:12px}
