@@ -12,6 +12,7 @@ html=re.sub(r'<script src="/three.min.js"></script>',lambda m:'<script>'+r('thre
 html=re.sub(r'<script src="/studio.js[^"]*"></script>',lambda m:'<script>const CHAR_DATA='+json.dumps(data)+';\n'+st+'</script>',html)
 html=re.sub(r'<script src="/char3d.js[^"]*"></script>',lambda m:'<script>'+r('char3d.js')+'</script>',html)
 html=re.sub(r'<script src="/craft.js[^"]*"></script>',lambda m:'<script>'+r('craft.js')+'</script>',html)
+html=re.sub(r'<script src="/net-config.js[^"]*"></script>',lambda m:'<script>'+(open(os.environ['NETCFG']).read() if os.environ.get('NETCFG') else r('net-config.js'))+'</script>',html)
 html=re.sub(r'<script src="/throw.js[^"]*"></script>',lambda m:'<script>'+r('throw.js')+'</script>',html)
 assert 'src="/' not in html and 'href="/' not in html, re.findall(r'(?:src|href)="/[^"]*"',html)
 open(out,'w',encoding='utf-8').write(html); print(out, len(html)//1024,'KB')
