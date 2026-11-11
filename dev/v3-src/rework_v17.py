@@ -49,7 +49,7 @@ svg='''<svg viewBox="0 0 941 1672" preserveAspectRatio="none" aria-hidden="true"
 <ellipse class="spin c" cx="510" cy="1272" rx="116" ry="38" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="3" stroke-dasharray="25 160" stroke-linecap="round"/>
 </g>
 <ellipse class="rim" cx="512" cy="1250" rx="178" ry="58" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-dasharray="60 1040" stroke-linecap="round"/>
-<g clip-path="url(#sosoHfPot)"><rect class="sheen" x="480" y="1100" width="60" height="200" fill="url(#sosoHfSheen)"/><rect class="sheen" x="480" y="1100" width="28" height="200" fill="url(#sosoHfSheen)" style="animation-delay:-.6s;opacity:.6"/></g>
+
 <ellipse class="fire" cx="802" cy="1005" rx="62" ry="52" fill="url(#sosoHfFire)"/>
 __DROPS__
 __DUST__
@@ -58,8 +58,7 @@ js=r'''<script id="soso-v17">
 (function(){
 function init(){var sc=document.querySelector('.scene');if(!sc){setTimeout(init,300);return;}if(document.getElementById('sosoHomeFx'))return;
   var bg=getComputedStyle(sc).backgroundImage;var fx=document.createElement('div');fx.id='sosoHomeFx';
-  fx.innerHTML='<div class="lay head"></div><div class="lay lh"></div><div class="lay rh"></div>'+__SVG__;
-  fx.querySelectorAll('.lay').forEach(function(l){l.style.backgroundImage=bg;});
+  fx.innerHTML=__SVG__;
   sc.appendChild(fx);
   setInterval(function(){var m=document.getElementById('makeMode'),busy=(m&&m.classList.contains('show'))||document.hidden;fx.classList.toggle('paused',!!busy);},500);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
