@@ -641,6 +641,20 @@ const player = new THREE.Group(); scene.add(player);
 player.position.set(-2.6, 0, 2.4); player.rotation.y = Math.PI * 0.25;
 player.userData = { pose: 'stand', walkAmt: 0, phase: 0 };
 const playerActor = makeActor();
+/* 3D 점토 인형 캐릭터 (char3d.js) — 그림 캐릭터 대신 내 캐릭터로 써요 */
+const USE_3D = !!window.HeukChar3D;
+const C3 = {};
+if (USE_3D) for (const k of ['A', 'B']) {
+  const c = HeukChar3D.make(k); c.root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+  const bb = new THREE.Box3().setFromObject(c.root), h = bb.max.y - bb.min.y; c.scale = 1.22 / h; c.root.scale.setScalar(c.scale);
+  c.root.visible = false; scene.add(c.root); C3[k] = c;
+}
+let heldMesh = null, heldId = null;
+function syncHeld(c) {
+  const id = carrying ? carrying.id : null;
+  if (id !== heldId) { if (heldMesh) { heldMesh.parent && heldMesh.parent.remove(heldMesh); heldMesh = null; }
+    heldId = id; if (carrying) { heldMesh = pieceMesh(carrying, 0.28 / c.scale); heldMesh.position.set(0, -0.05, 0.02); c.holdPt.add(heldMesh); } }
+}
 /* 캐릭터 그리기: 몸을 기울이거나 튕기지 않고, 그림 컷만 바꿔서 움직임을 만든다 (초당 8컷) */
 const FPS = 10;   // 8컷 걷기 한 바퀴 0.8초
 function viewOf(aa) { return aa < 0.42 ? 'front' : aa < 1.2 ? 'q' : aa < 1.95 ? 'side' : aa < 2.75 ? 'bq' : 'back'; }
@@ -674,7 +688,24 @@ function drawChar(actor, key, x, z, yaw, walking, t, carry, fps = FPS) {
   else name = S.back;
   showFrame(actor, name, x, z, flip);
 }
+let last3d = performance.now();
+function drawPlayer3d(now) {
+  const u = player.userData, p = player.position, c = C3[PLAYER_KEY], dt = Math.min(0.05, (now - last3d) / 1000); last3d = now;
+  for (const k in C3) C3[k].root.visible = k === PLAYER_KEY;
+  playerActor.mesh.visible = false; playerActor.blob.visible = true;
+  syncHeld(c);
+  if (u.pose === 'sit' && sitTarget) {
+    const w = sitTarget; c.set('sit'); c.root.position.set(w.seat.x, 0.44 - 0.075 * c.scale, w.seat.z + 0.02); c.root.rotation.y = 0;
+    playerActor.blob.position.set(w.seat.x, 0.008, w.seat.z); c.update(dt, false); return;
+  }
+  const walking = u.walkAmt > 0.35;
+  c.set(carrying ? 'carry' : 'idle'); if (now < cheerUntil && !c._cheer) { c.set('wave'); c._cheer = true; } if (now >= cheerUntil) c._cheer = false;
+  c.root.position.set(p.x, 0, p.z); c.root.rotation.y = player.rotation.y;
+  playerActor.blob.position.set(p.x, 0.008, p.z); playerActor.blob.scale.set(1, 0.6, 1);
+  c.update(dt, walking, Math.max(0.6, Math.min(1.3, u.walkAmt)));
+}
 function drawPlayer(now) {
+  if (USE_3D) return drawPlayer3d(now);
   const u = player.userData, S = SET[PLAYER_KEY], p = player.position;
   playerActor.mesh.rotation.z = 0;
   if (u.pose === 'sit') {
@@ -786,7 +817,7 @@ function drawNPCs(now, dt) {
 function seatOn(ch, w) {
   const u = ch.userData; u.pose = 'sit'; u.walkAmt = 0;
   ch.position.copy(w.seat);
-  w.g.visible = false; w.stool.visible = false;             // 시트 속 물레 그림이 대신 보임
+  if (!USE_3D) { w.g.visible = false; w.stool.visible = false; }            // 그림 캐릭터일 때만: 시트 속 물레 그림이 대신 보임
 }
 function standUp(ch, w) { ch.userData.pose = 'stand'; if (w) { w.g.visible = true; w.stool.visible = true; } }
 
