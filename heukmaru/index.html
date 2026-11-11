@@ -1144,9 +1144,8 @@ window.HeukCraft = { get active() { return !!active; }, openKiln, openGlaze, ope
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script>/* 흙마루 온라인 설정 — Firebase 콘솔의 웹 앱 설정(firebaseConfig)을 그대로 붙여 넣어요.
-   비워 두면 혼자 놀기로 돌아가요. (이 값들은 원래 웹에 공개되는 값이에요) */
-window.HEUK_FB = null;
+<script>/* 흙마루 온라인 설정 — Firebase 실시간 데이터베이스 주소 (원래 공개되는 값이에요) */
+window.HEUK_FB = { databaseURL: 'https://heukmaru-default-rtdb.asia-southeast1.firebasedatabase.app', projectId: 'heukmaru' };
 </script>
 <script>const CHAR_DATA={};
 /* 흙마루 v3 — 물레 작업실 (아이소메트릭 3D 미니어처 방)
@@ -2773,7 +2772,7 @@ const Net = (() => {
   function start() {
     try {
       if (/[?&]net=local\b/.test(location.search) && window.BroadcastChannel) tr = localTr();
-      else if (window.HEUK_FB && window.HEUK_FB.apiKey && window.firebase && firebase.database) tr = firebaseTr(window.HEUK_FB);
+      else if (window.HEUK_FB && window.HEUK_FB.databaseURL && window.firebase && firebase.database) tr = firebaseTr(window.HEUK_FB);
     } catch (e) { console.warn('흙마루 온라인 연결 실패', e); tr = null; }
     return !!tr;
   }
