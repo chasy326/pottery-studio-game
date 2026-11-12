@@ -20,7 +20,8 @@ const VESSELS = {
   bowl:   { name: '사발', H: 0.62, floorR: 0.34, pulls: 2, prof: t => 0.36 + 0.5 * Math.pow(t, 0.8) },
   bottle: { name: '병', H: 1.3, floorR: 0.3, pulls: 3, prof: t => t < 0.62 ? 0.4 + 0.12 * Math.sin(t / 0.62 * Math.PI * 0.9) : lerp(0.36, 0.15, clamp((t - 0.62) / 0.22, 0, 1)) + (t > 0.94 ? (t - 0.94) * 1.2 : 0) },
   jar:    { name: '항아리', H: 1.1, floorR: 0.32, pulls: 3, prof: t => t < 0.85 ? 0.38 + 0.28 * Math.sin(t / 0.85 * Math.PI) * (t < 0.45 ? 1 : 1) - (t > 0.6 ? (t - 0.6) * 0.5 : 0) : 0.3 + (t - 0.85) * 0.4 },
-  goblet: { name: '고블렛잔', H: 1.2, floorR: 0.22, pulls: 3, prof: t => t < 0.12 ? 0.36 - t * 1.0 : t < 0.42 ? 0.14 : 0.14 + 0.32 * Math.sin(clamp((t - 0.42) / 0.58, 0, 1) * Math.PI * 0.5) }
+  goblet: { name: '고블렛잔', H: 1.2, floorR: 0.22, pulls: 3, prof: t => t < 0.12 ? 0.36 - t * 1.0 : t < 0.42 ? 0.14 : 0.14 + 0.32 * Math.sin(clamp((t - 0.42) / 0.58, 0, 1) * Math.PI * 0.5) },
+  plate:  { name: '접시', H: 0.38, floorR: 0.5, pulls: 1, prof: t => 0.46 + 0.62 * Math.pow(t, 1.4) },
 };
 const STEPS = [
   { key: 'attach', label: '흙 붙이기', speed: [0, 0.15] },
@@ -87,7 +88,7 @@ const css = document.createElement('style'); css.textContent = `
 .tw-veil[hidden]{display:none}
 .tw-card{background:#f6f1e8;color:#2f2925;border-radius:24px;padding:22px;max-width:94vw;width:560px;max-height:94vh;overflow:auto;text-align:center;box-shadow:0 20px 60px #0008}
 .tw-card h2{margin:0 0 4px;font-size:21px}.tw-card p{margin:0 0 14px;font-size:13px;color:#7a6d60}
-.tw-ves{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.tw-ves{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
 .tw-ves button{background:#fff;border:2px solid #e3d8c8;border-radius:16px;padding:8px 2px 6px;font-size:12px;font-weight:700;color:#3a322b;display:flex;flex-direction:column;align-items:center;gap:4px}
 .tw-ves button.on{border-color:#a8875f;background:#fbf5ea}
 .tw-ves canvas{width:52px;height:62px}
