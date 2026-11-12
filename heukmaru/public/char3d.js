@@ -99,7 +99,7 @@ function make(kind = 'A') {
   const holdPt = new THREE.Group(); holdPt.position.set(0, 0.1, 0.21); hips.add(holdPt);
 
   // --- 동작
-  let pose = 'idle', t = Math.random() * 10, phase = 0, blinkT = 2 + Math.random() * 3, waveT = 0, spd = 0;
+  let pose = 'idle', t = Math.random() * 10, phase = 0, blinkT = 2 + Math.random() * 3, waveT = 0, clapT = 0, spd = 0;
   const lerp = (a, b, k) => a + (b - a) * k;
   function update(dt, moving = false, speed = 1) {
     t += dt; spd = lerp(spd, moving ? 1 : 0, Math.min(1, dt * 8));
@@ -118,19 +118,20 @@ function make(kind = 'A') {
       const a = sit ? -1.45 : sw * s * 0.6, kb = sit ? 1.5 : Math.max(0, -Math.sin(phase + (s > 0 ? 0 : Math.PI)) * 0.7 * spd);
       hp.rotation.x = lerp(hp.rotation.x, a, k); kn.rotation.x = lerp(kn.rotation.x, kb, k); hp.rotation.z = lerp(hp.rotation.z, sit ? s * 0.12 : 0, k);
     });
-    if (waveT > 0) waveT -= dt;
+    if (waveT > 0) waveT -= dt; if (clapT > 0) clapT -= dt; const clap = clapT > 0;
     arms.forEach(({ sh, el, s }) => {
       let ax = -sw * s * 0.55, az = s * 0.14, ex = -0.2 - spd * 0.2;
       if (carry) { ax = -1.15; az = s * -0.2; ex = -0.5; }
       if (sit) { ax = -0.95; az = s * -0.12; ex = -0.7; }
       if (bowP) { ax = 0.2; az = s * 0.05; ex = -0.1; }
       if (wave && s > 0) { ax = -0.2; az = 2.5; ex = -0.4 + Math.sin(t * 12) * 0.45; }
+      if (clap) { const o = 0.5 + 0.5 * Math.sin(t * 19); ax = -1.3; az = s * (-0.28 - 0.22 * o); ex = -0.55; }
       sh.rotation.x = lerp(sh.rotation.x, ax, k); sh.rotation.z = lerp(sh.rotation.z, az, k); el.rotation.x = lerp(el.rotation.x, ex, k);
     });
     blinkT -= dt; const bl = blinkT < 0.12 && blinkT > 0 ? 0.12 : 1.15; if (blinkT < 0) blinkT = 2.5 + Math.random() * 3.5;
     eyes.forEach(e => e.scale.y = lerp(e.scale.y, bl, 0.6));
   }
-  function set(p) { if (p === 'wave') { waveT = 1.8; return; } pose = p; }
+  function set(p) { if (p === 'wave') { waveT = 1.8; return; } if (p === 'clap') { clapT = 1.6; return; } pose = p; }
   update(0.016);
   return { root, set, update, holdPt, get pose() { return pose; }, kind };
 }
