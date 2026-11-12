@@ -111,3 +111,50 @@
 #sosoPaintHand{position:absolute;z-index:47;width:58px;height:auto;pointer-events:none;display:none;transform-origin:9px 1px;filter:drop-shadow(0 3px 3px rgba(60,30,60,.3))}
 #sosoTrimResult .tr-skip{all:unset;box-sizing:border-box;display:block;width:100%;margin-top:8px;padding:10px;text-align:center;font-size:16px;color:#8a6a48;cursor:pointer}
 #sosoGallery .gl-thumb{display:block;width:100%;height:auto;border-radius:12px}
+#sosoGlazePick{position:absolute;z-index:60;left:0;right:0;bottom:0;display:none;padding:0 10px calc(10px + env(safe-area-inset-bottom))}
+#sosoGlazePick.show{display:block}
+#sosoGlazePick .gp-card{background:#fffaf0;border:2px solid #e2c99a;border-radius:22px;padding:12px 12px 10px;box-shadow:0 -4px 14px rgba(60,40,20,.2);color:#5b3a1f;max-height:62vh;display:flex;flex-direction:column}
+#sosoGlazePick h3{margin:0;font-size:22px;font-weight:400;text-align:center}
+#sosoGlazePick .gp-sub{margin:2px 0 8px;font-size:13px;color:#8a6a48;text-align:center}
+#sosoGlazePick button{all:unset;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#sosoGlazePick .gp-cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;flex:0 0 auto}
+#sosoGlazePick .gp-cats::-webkit-scrollbar{display:none}
+#sosoGlazePick .gp-cats button{flex:0 0 auto;padding:6px 11px;border-radius:14px;border:2px solid #e8d6b4;background:#fff;font-size:14px;white-space:nowrap}
+#sosoGlazePick .gp-cats button.on{border-color:#e97c31;background:#fff1e2}
+#sosoGlazePick .gp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;overflow-y:auto;padding:2px;flex:1 1 auto;min-height:0}
+#sosoGlazePick .gt{text-align:center;padding:4px;border-radius:14px;border:2px solid transparent}
+#sosoGlazePick .gt.on{border-color:#e97c31;background:#fff1e2}
+#sosoGlazePick .gt b{display:block;font-size:13px;font-weight:700;margin-top:4px;line-height:1.2;word-break:keep-all}
+#sosoGlazePick .gt small{display:block;font-size:11px;color:#9a7a58}
+#sosoGlazePick .tile{position:relative;display:block;height:72px;border-radius:9px 9px 5px 5px;background:#d9c2a3;overflow:hidden;box-shadow:0 2px 4px rgba(80,50,20,.25)}
+#sosoGlazePick .tile i{position:absolute;left:0;right:0;top:0;bottom:12px;background:linear-gradient(180deg,var(--c),color-mix(in srgb,var(--c) 80%,#000));border-radius:9px 9px 0 0}
+#sosoGlazePick .tile::after{content:'';position:absolute;left:7px;top:5px;width:14px;height:52px;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,0))}
+#sosoGlazePick .tile.matte::after{opacity:.15}#sosoGlazePick .tile.satin::after{opacity:.4}
+#sosoGlazePick .tile.clear i{background:linear-gradient(180deg,color-mix(in srgb,var(--c) 70%,#e7d3b6),var(--c) 70%,color-mix(in srgb,var(--c) 75%,#000))}
+#sosoGlazePick .tile.run i::after{content:'';position:absolute;left:0;right:0;bottom:-5px;height:10px;background:radial-gradient(circle at 20% 0,var(--c) 4px,transparent 5px),radial-gradient(circle at 55% 0,var(--c) 5px,transparent 6px),radial-gradient(circle at 82% 0,var(--c) 4px,transparent 5px)}
+#sosoGlazePick .tile.crackle i{background-image:linear-gradient(115deg,transparent 46%,rgba(60,45,30,.45) 47%,transparent 48%),linear-gradient(35deg,transparent 60%,rgba(60,45,30,.4) 61%,transparent 62%),linear-gradient(180deg,var(--c),var(--c))}
+#sosoGlazePick .tile.crystal i{background-image:radial-gradient(circle at 30% 40%,rgba(230,240,255,.9) 0 3px,transparent 9px),radial-gradient(circle at 70% 65%,rgba(230,240,255,.8) 0 2px,transparent 7px),linear-gradient(180deg,var(--c),var(--c))}
+#sosoGlazePick .tile.vari i,#sosoGlazePick .tile.opal i{background-image:radial-gradient(circle at 30% 30%,rgba(255,255,255,.35),transparent 40%),radial-gradient(circle at 70% 70%,rgba(0,0,0,.25),transparent 45%),linear-gradient(180deg,var(--c),var(--c))}
+#sosoGlazePick .tile.pearl i{background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.5px),linear-gradient(180deg,var(--c),var(--c));background-size:9px 9px,100% 100%}
+#sosoGlazePick .gp-sel{margin:8px 0 6px;font-size:14px;text-align:center;flex:0 0 auto}
+#sosoGlazePick .gp-go{display:block;text-align:center;height:50px;line-height:46px;border-radius:18px;border:2px solid #8a4416;background:linear-gradient(180deg,#f29a4a,#c9661f);color:#fff;font-size:19px;box-shadow:0 4px 0 #8a4416;flex:0 0 auto}
+#sosoGlazePick .gp-go.off{opacity:.45;pointer-events:none}
+#sosoGlazePick .gp-skip{display:block;text-align:center;padding:9px 0 2px;font-size:14px;color:#8a6a48;flex:0 0 auto}
+#sosoGlazePanel{position:absolute;z-index:46;left:0;right:0;bottom:0;display:none;flex-direction:column;gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom));background:#fff8e8f4;border-top:1px solid #d6c09c;box-shadow:0 -4px 12px #4b34201c;color:#5b3a1f}
+#sosoGlazePanel.show{display:flex}
+#sosoGlazePanel .gz-head{display:flex;align-items:center;gap:10px}
+#sosoGlazePanel .gz-sw{width:34px;height:34px;border-radius:10px;background:var(--c);box-shadow:inset 0 -6px 0 rgba(0,0,0,.15),0 0 0 2px #fff,0 0 0 3px #e2cda8}
+#sosoGlazePanel .gz-head b{display:block;font-size:17px;font-weight:700}
+#sosoGlazePanel .gz-head small{font-size:12px;color:#9a7a58}
+#sosoGlazePanel .gz-hint{font-size:15px;text-align:center}
+#sosoGlazePanel .gz-meter{position:relative;display:grid;grid-template-columns:1fr 1.2fr 1fr;height:24px;border-radius:12px;overflow:hidden;font-size:12px;text-align:center;line-height:24px}
+#sosoGlazePanel .gz-meter .a{background:#f3e6cf}#sosoGlazePanel .gz-meter .b{background:#cfe8c8}#sosoGlazePanel .gz-meter .c{background:#f5d0bf}
+#sosoGlazePanel .gz-meter i{position:absolute;top:0;bottom:0;width:4px;margin-left:-2px;background:#5b3a1f;border-radius:2px;left:0;transition:left .1s}
+#sosoGlazePanel .gz-row{display:flex;gap:8px;align-items:center}
+#sosoGlazePanel .gz-row:empty{display:none}
+#sosoGlazePanel button{all:unset;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#sosoGlazePanel .gz-b{flex:1;text-align:center;height:48px;line-height:44px;border-radius:16px;font-size:17px}
+#sosoGlazePanel .gz-b.a{border:2px solid #e2c99a;background:#fff;box-shadow:0 3px 0 #d9c3a0}
+#sosoGlazePanel .gz-b.b{border:2px solid #8a4416;background:linear-gradient(180deg,#f29a4a,#c9661f);color:#fff;box-shadow:0 4px 0 #8a4416}
+#sosoGlazePanel .gz-prog{flex:1;height:14px;border-radius:8px;background:#eadbc0;overflow:hidden}
+#sosoGlazePanel .gz-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8fd0e8,#4c9ac0);transition:width .2s}
