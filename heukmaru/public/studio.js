@@ -2303,11 +2303,11 @@ const Tea = (() => {
       g.strokeStyle = 'rgba(0,0,0,.12)'; g.lineWidth = 3; g.beginPath(); if (tray) g.roundRect(C - Rpx, C - Rpx * 0.7, Rpx * 2, Rpx * 1.4, 14); else g.arc(C, C, Rpx * 0.98, 0, 7); g.stroke();
       if (!tray) { g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 6; g.beginPath(); g.arc(C, C, Rpx * 1.03, -2.4, -1.2); g.stroke(); }
       arr.forEach((o, i) => { const [x, y] = toPx(o[1], o[2]); drawItem(g, o[0], x, y, o[3], Rpx, o[4]); if (i === selI) { g.strokeStyle = '#c98a4a'; g.lineWidth = 4; g.setLineDash([8, 6]); g.beginPath(); g.arc(x, y, SNACKS[o[0]].r * Rpx + 10, 0, 7); g.stroke(); g.setLineDash([]); } });
-      const n = arr.filter(o => SNACKS[o[0]].snack).length; cnt.textContent = `다과 ${n} / 6 · 장식 ${arr.length - n} / 4${arr.length ? ' · ' + judge(arr, tray) : ''}`;
+      const n = arr.filter(o => SNACKS[o[0]].snack).length; cnt.textContent = arr.length ? `다과 ${n}개 · 장식 ${arr.length - n}개 · ${judge(arr, tray)}` : '바구니에서 마음껏 골라 담아요';
       rot.disabled = del.disabled = selI < 0; clr.disabled = !arr.length;
     }
     Object.entries(SNACKS).forEach(([k, S]) => { const c = el('div', 'it'); c.append(el('div', 'em', S.icon), el('div', '', S.name)); c.querySelector('.em').style.fontSize = '22px'; pal.append(c);
-      c.onclick = () => { const n = arr.filter(o => SNACKS[o[0]].snack).length; if (S.snack ? n >= 6 : arr.length - n >= 4) { cnt.textContent = S.snack ? '다과는 6개까지 담을 수 있어요' : '장식은 4개까지예요'; return; }
+      c.onclick = () => { const n = arr.filter(o => SNACKS[o[0]].snack).length; if (arr.length >= 60) { cnt.textContent = '접시가 가득 찼어요 · 더는 못 올려요'; return; }
         const a = Math.random() * 6.28, d = arr.length ? 0.35 + Math.random() * 0.25 : 0; arr.push([k, +(Math.cos(a) * d).toFixed(2), +(Math.sin(a) * d * (tray ? 0.8 : 1)).toFixed(2), +(Math.random() * 3).toFixed(2), Math.floor(Math.random() * 3)]); selI = arr.length - 1; Sound.sfx.click(); draw(); }; });
     const ptr = new Map(); let drag = null, rot0 = null;
     const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * 2, (e.clientY - r.top) * 2]; };
@@ -2337,20 +2337,110 @@ const Tea = (() => {
     const holdBtn = (label, onDown, onUp) => { const bt = el('button', 'big', label); const dn = e => { e.preventDefault(); bt.classList.add('hold'); onDown(); }, up = e => { if (!bt.classList.contains('hold')) return; bt.classList.remove('hold'); onUp(); };
       bt.addEventListener('pointerdown', dn); bt.addEventListener('pointerup', up); bt.addEventListener('pointerleave', up); bt.addEventListener('pointercancel', up); bt.oncontextmenu = e => e.preventDefault(); return bt; };
     const Pour = Plating; let raf = 0; const loop = f => { let last = performance.now(); const tick = now => { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (f(dt) !== false && !box.hidden) raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); };
-    // 끓이기
+    // 끓이기 — 유리 전기포트: 물 받기 → 뚜껑 닫기 → 스위치 켜기 → 기포·김 보고 끄기
     (() => {
-      const b = frame(`${T.icon} ${T.name} — 물 끓이기`, `꾹 누르는 동안 불이 세져요. 초록 칸(${T.band[0]}~${T.band[1]}℃)에 2초 머물러요`); head(b, 0);
-      const stg = el('div', 'stage'), gau = el('div', 'gauge'), band = el('div', 'band'), fill = el('div', 'fill'), info = el('div', 'info'), tv = el('b', '', '20℃'), msg = el('div', '', '찬물이에요');
-      band.style.bottom = (T.band[0]) + '%'; band.style.height = (T.band[1] - T.band[0]) + '%'; gau.append(band, fill); info.append(tv, msg); stg.append(gau, info); b.append(stg);
-      let temp = 20, heat = false, inT = 0, over = 0, el2 = 0;
-      b.append(holdBtn('🔥 꾹 눌러 불 올리기', () => { heat = true; }, () => { heat = false; }));
+      const hint = { green: '바닥에 잔기포가 송골송골 맺히고 하나둘 올라올 때(70~80℃) 스위치를 꺼요', chrys: '기포가 줄지어 쉬지 않고 올라올 때(85~95℃) 꺼요', puer: '펄펄 끓어 스위치가 탁 꺼질 때까지 둬요(95℃~)' }[sel.tt];
+      const b = frame(`${T.icon} ${T.name} — 전기포트로 물 끓이기`, '물병을 꾹 눌러 MIN~MAX 사이로 물을 받고, 뚜껑을 닫고 스위치를 켜요'); head(b, 0);
+      const wrap = el('div'); wrap.style.cssText = 'position:relative;margin:8px 0'; const W = Math.min(420, innerWidth - 60), Hh = Math.round(W * 0.8), dpr = Math.min(2, devicePixelRatio || 1);
+      const cv = el('canvas'); cv.width = W * dpr; cv.height = Hh * dpr; cv.style.cssText = `width:${W}px;height:${Hh}px;display:block;border-radius:16px;background:linear-gradient(#f3ece1,#e6d8c2);touch-action:none`;
+      const hud = el('div'); hud.style.cssText = 'position:absolute;left:10px;top:8px;right:10px;font-size:13px;font-weight:700;color:#3d342c;text-shadow:0 1px 0 #fff8';
+      const tip = el('div', 'tip', `💡 ${hint}`); wrap.append(cv, hud); b.append(wrap, tip);
+      const row = el('div', 'row'); const fillB = holdBtn('💧 꾹 눌러 물 받기', () => { filling = true; }, () => { filling = false; }), lidB = el('button', 'sub2', '뚜껑 닫기'), swB = el('button', '', '🔌 스위치 켜기');
+      lidB.disabled = true; swB.disabled = true; row.append(lidB, swB); b.append(fillB, row);
+      let R3; try { R3 = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); } catch (e) { R3 = null; }
+      if (!R3) { tip.textContent = '이 기기에선 3D 포트를 열 수 없어요'; score.push(1); setTimeout(steep, 800); return; }
+      R3.setPixelRatio(dpr); R3.setSize(W, Hh, false); R3.shadowMap.enabled = true;
+      const S3 = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, W / Hh, 0.05, 50); cam.position.set(0.9, 1.75, 3.9); cam.lookAt(0.15, 0.62, 0);
+      S3.add(new THREE.HemisphereLight('#fff8ee', '#b9a283', 1.2)); const dl = new THREE.DirectionalLight('#ffffff', 1.3); dl.position.set(2, 4, 3); dl.castShadow = true; dl.shadow.mapSize.set(512, 512); S3.add(dl);
+      const STD = (c, r = 0.6, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r }, o || {}));
+      const table = new THREE.Mesh(new THREE.BoxGeometry(6, 0.12, 3), STD('#7b5a3d', 0.75)); table.position.y = -0.06; table.receiveShadow = true; S3.add(table);
+      // 받침(전원 베이스) + 온도 표시창
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.53, 0.14, 40), STD('#3a3836', 0.45)); base.position.y = 0.07; base.castShadow = true; S3.add(base);
+      const dc = document.createElement('canvas'); dc.width = 128; dc.height = 56; const dg = dc.getContext('2d'), dTex = new THREE.CanvasTexture(dc);
+      const disp = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.1), new THREE.MeshBasicMaterial({ map: dTex, toneMapped: false })); disp.position.set(0.12, 0.075, 0.52); disp.rotation.y = 0.25; S3.add(disp);
+      let shown = null; const showT = (t, on) => { const k = on ? Math.round(t) : -1; if (k === shown) return; shown = k; dg.fillStyle = '#1c1f22'; dg.fillRect(0, 0, 128, 56); if (on) { dg.fillStyle = t >= T.band[0] && t <= T.band[1] ? '#8fe08a' : '#7fd6ff'; dg.font = 'bold 38px monospace'; dg.textAlign = 'center'; dg.textBaseline = 'middle'; dg.fillText(k + '℃', 64, 30); } dTex.needsUpdate = true; };
+      showT(20, false);
+      // 유리 포트
+      const H = 1.0, Y0 = 0.17, R0 = 0.4, R1 = 0.35, rAt = f => R0 + (R1 - R0) * f;
+      const kettle = new THREE.Group(); S3.add(kettle);
+      const glass = new THREE.Mesh(new THREE.CylinderGeometry(R1, R0, H, 40, 1, true), STD('#dff1f4', 0.08, { transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false })); glass.position.y = Y0 + H / 2; kettle.add(glass);
+      const dark = STD('#2f2d2b', 0.4);
+      const bot = new THREE.Mesh(new THREE.CylinderGeometry(R0 + 0.02, R0 + 0.03, 0.06, 40), STD('#d9d6d0', 0.3, { metalness: 0.6 })); bot.position.y = Y0 + 0.01; kettle.add(bot);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(R1, 0.018, 8, 40), dark); rim.rotation.x = Math.PI / 2; rim.position.y = Y0 + H; kettle.add(rim);
+      const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.09, 0.2, 12, 1, true), STD('#dff1f4', 0.08, { transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false })); spout.position.set(R1 + 0.06, Y0 + H - 0.08, 0); spout.rotation.z = -1.0; kettle.add(spout);
+      const hx = -R0 - 0.2; const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.78, 0.1), dark); hBar.position.set(hx, Y0 + 0.52, 0); hBar.castShadow = true; kettle.add(hBar);
+      for (const y of [Y0 + 0.9, Y0 + 0.16]) { const arm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.07, 0.09), dark); arm.position.set(hx + 0.1, y, 0); kettle.add(arm); }
+      const sw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.11), STD('#5b5753', 0.5)); sw.position.set(hx + 0.01, Y0 + 0.1, 0); kettle.add(sw);
+      const led = new THREE.Mesh(new THREE.TorusGeometry(R0 + 0.025, 0.012, 6, 48), new THREE.MeshBasicMaterial({ color: '#2a3036' })); led.rotation.x = Math.PI / 2; led.position.y = Y0 - 0.005; kettle.add(led);
+      for (const [f, t] of [[0.3, 'MIN'], [0.8, 'MAX']]) { const y = Y0 + f * H, r = rAt(f) + 0.004; const ln = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.012, 0.006), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.85 })); ln.position.set(r * Math.sin(0.35), y, r * Math.cos(0.35)); ln.rotation.y = 0.35; kettle.add(ln);
+        const lc = document.createElement('canvas'); lc.width = 64; lc.height = 24; const lg = lc.getContext('2d'); lg.fillStyle = '#ffffff'; lg.font = 'bold 18px sans-serif'; lg.fillText(t, 4, 18); const lb = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.05), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), transparent: true, depthWrite: false })); lb.position.set((r + 0.002) * Math.sin(0.62), y + 0.005, (r + 0.002) * Math.cos(0.62)); lb.rotation.y = 0.62; kettle.add(lb); }
+      // 물
+      const wMat = STD('#b9e1ee', 0.05, { transparent: true, opacity: 0.32, depthWrite: false }), water = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 36), wMat); water.visible = false; kettle.add(water);
+      const wTop = new THREE.Mesh(new THREE.CircleGeometry(1, 36), STD('#e8f7fb', 0.02, { transparent: true, opacity: 0.55, depthWrite: false })); wTop.rotation.x = -Math.PI / 2; wTop.visible = false; kettle.add(wTop);
+      // 뚜껑 (처음엔 옆에 벗겨 둠)
+      const lid = new THREE.Group(); const lidD = new THREE.Mesh(new THREE.CylinderGeometry(R1 + 0.01, R1 + 0.02, 0.05, 36), dark); lid.add(lidD); const lk = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.05), dark); lk.position.y = 0.05; lid.add(lk); S3.add(lid);
+      const lidOff = new THREE.Vector3(-1.2, 0.03, 0.45), lidOn = new THREE.Vector3(0, Y0 + H + 0.025, 0); lid.position.copy(lidOff); lid.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      // 물병
+      const bottle = new THREE.Group(), bMat = STD('#d7eef5', 0.1, { transparent: true, opacity: 0.45, depthWrite: false }); const bb = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.6, 20), bMat); bb.position.y = 0.3 - 0.77; bottle.add(bb);
+      const bn = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.15, 0.16, 16), bMat); bn.position.y = 0.68 - 0.77; bottle.add(bn); bottle.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      const bIn = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.5, 20), STD('#bfe2ef', 0.05, { transparent: true, opacity: 0.35, depthWrite: false })); bIn.position.y = 0.27 - 0.77; bottle.add(bIn); S3.add(bottle);
+      const mouthL = new THREE.Vector3(0, 0.02, 0);   // 물병은 입구를 축으로 기울어요
+      const stream = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), wMat.clone()); stream.material.opacity = 0.6; stream.visible = false; S3.add(stream);
+      const spill = new THREE.Mesh(new THREE.CircleGeometry(0.45, 24), STD('#cfe3ea', 0.05, { transparent: true, opacity: 0, depthWrite: false })); spill.rotation.x = -Math.PI / 2; spill.position.set(0.25, 0.003, 0.45); S3.add(spill);
+      // 기포 · 김
+      const bubs = [], bGeo = new THREE.SphereGeometry(1, 8, 6), bubM = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.1, transparent: true, opacity: 0.7, depthWrite: false });
+      for (let i = 0; i < 70; i++) { const m = new THREE.Mesh(bGeo, bubM); m.visible = false; kettle.add(m); bubs.push({ m, live: false, y: 0, x: 0, z: 0, s: 0.01, v: 0, stick: 0 }); }
+      const stc = document.createElement('canvas'); stc.width = stc.height = 64; const sg = stc.getContext('2d'), gr = sg.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = gr; sg.fillRect(0, 0, 64, 64);
+      const stTex = new THREE.CanvasTexture(stc), steams = []; for (let i = 0; i < 18; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: stTex, transparent: true, opacity: 0, depthWrite: false })); s.visible = false; S3.add(s); steams.push({ s, life: 0, max: 1 }); }
+      const spoutTip = () => new THREE.Vector3(R1 + 0.14, Y0 + H + 0.0, 0);
+      let phase = 'fill', filling = false, level = 0, over = false, lidT = 0, on = false, temp = 20, offAt = null, auto = false, el2 = 0, judged = false, bubAcc = 0, stAcc = 0, bTilt = 0, wob = 0;
+      const MIN = 0.3, MAX = 0.8;
+      const setSw = v => { on = v; Sound.sfx.click(); led.material.color.set(v ? '#47b6ff' : '#2a3036'); sw.position.y = Y0 + 0.1 + (v ? -0.02 : 0); swB.textContent = v ? '✋ 스위치 끄기' : '🔌 스위치 켜기'; if (!v) { offAt = temp; finishBoil(); } };
+      lidB.onclick = () => { if (phase !== 'fill' || level < MIN) return; phase = 'lid'; filling = false; fillB.disabled = lidB.disabled = true; Sound.sfx.click(); };
+      swB.onclick = () => { if (phase === 'ready' && !on) { phase = 'heat'; setSw(true); } else if (phase === 'heat' && on) setSw(false); };
+      const ray = new THREE.Raycaster(); cv.addEventListener('pointerdown', e => { const r = cv.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), cam);
+        if (phase === 'fill') { if (ray.intersectObjects([bb, bn], false).length) { filling = true; const up = () => { filling = false; removeEventListener('pointerup', up); }; addEventListener('pointerup', up); } else if (level >= MIN && ray.intersectObjects([lidD, lk], false).length) lidB.onclick(); }
+        else if (ray.intersectObjects([sw, hBar], false).length) swB.onclick(); });
+      function finishBoil() { if (judged) return; judged = true; phase = 'done'; swB.disabled = true; Sound.sfx.set('boil', 0);
+        const t = offAt, inB = t >= T.band[0] - 0.5 && t <= T.band[1] + 0.5, near = t >= T.band[0] - 6 && t <= T.band[1] + 6; let s = inB ? 2 : near ? 1 : 0; if (over && s === 2) s = 1; score.push(s); sel.water = Math.round(t);
+        hud.textContent = (auto ? '탁! 다 끓어서 꺼졌어요 · ' : '') + (inB ? `딱 알맞은 물이에요 (${Math.round(t)}℃)` : t < T.band[0] ? `조금 덜 데워졌어요 (${Math.round(t)}℃)` : `조금 뜨거워요 (${Math.round(t)}℃)`) + (over ? ' · 물이 좀 넘쳤어요' : '');
+        if (s === 2) Sound.sfx.ding();
+        setTimeout(() => { R3.dispose(); R3.forceContextLoss && R3.forceContextLoss(); if (!box.hidden) steep(); }, 1500); }
+      Pour._boil = { st: () => ({ phase, level, temp, on, over, offAt }), fill: v => { filling = v; }, lid: () => lidB.onclick(), sw: () => swB.onclick() };
+      const spawnBub = (big) => { const o = bubs.find(q => !q.live); if (!o) return; const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * (R0 - 0.06); o.live = true; o.x = Math.cos(a) * rr; o.z = Math.sin(a) * rr; o.y = Y0 + 0.045; o.s = big ? 0.025 + Math.random() * 0.03 : 0.008 + Math.random() * 0.01; o.v = big ? 0.9 + Math.random() * 0.6 : 0.25 + Math.random() * 0.3; o.stick = big ? 0 : 0.4 + Math.random() * (temp < 78 ? 2.5 : 0.6); o.m.visible = true; o.m.scale.setScalar(o.s); };
       loop(dt => {
-        el2 += dt; temp += (heat ? 26 : -9) * dt * (temp > 90 && heat ? 0.6 : 1); temp = Math.max(20, Math.min(100, temp));
-        const inside = temp >= T.band[0] && temp <= T.band[1]; if (inside) inT += dt; else if (temp > T.band[1] + 3) over += dt;
-        fill.style.height = `calc(${(temp - 0) / 100 * 100}% - 12px)`; tv.textContent = Math.round(temp) + '℃';
-        msg.textContent = inside ? `좋아요! ${Math.min(2, inT).toFixed(1)} / 2초` : temp < T.band[0] ? '조금 더 데워요' : '너무 뜨거워요 · 손을 떼요';
-        Sound.sfx.set('boil', Math.max(0, (temp - 40) / 60));
-        if (inT >= 2 || el2 > 18) { score.push(inT >= 2 ? (over < 0.8 ? 2 : 1) : 0); Sound.sfx.set('boil', 0); setTimeout(steep, 350); return false; }
+        if (box.hidden) { R3.dispose(); Sound.sfx.set('boil', 0); Sound.sfx.set('pour', 0); return false; }
+        el2 += dt;
+        // 물 받기
+        const want = filling && phase === 'fill' ? 1 : 0; bTilt += (want - bTilt) * Math.min(1, dt * 6);
+        const eb = bTilt * bTilt * (3 - 2 * bTilt); bottle.rotation.z = eb * 2.05; bottle.position.set(1.15 - eb * 0.9, 0.78 + eb * 0.6, -0.35 + eb * 0.35); bottle.updateMatrixWorld(true);
+        const flow = Math.max(0, (bTilt - 0.55) / 0.45); if (flow > 0 && phase === 'fill') { level += flow * 0.2 * dt; if (level > 0.95) { level = 0.95; over = true; spill.material.opacity = Math.min(0.55, spill.material.opacity + dt * 0.5); } }
+        bIn.scale.y = Math.max(0.05, 1 - level * 0.9);
+        if (flow > 0.02) { const top = bottle.localToWorld(mouthL.clone()), botP = new THREE.Vector3(top.x, Y0 + Math.max(0.02, level) * H, 0), mid = top.clone().add(botP).multiplyScalar(0.5), len = top.distanceTo(botP), th = 0.012 + 0.03 * flow;
+          stream.visible = true; stream.position.copy(mid); stream.scale.set(th, len, th); stream.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), top.clone().sub(botP).normalize()); } else stream.visible = false;
+        Sound.sfx.set('pour', flow > 0.02 ? 0.5 + flow * 0.5 : 0);
+        if (phase === 'fill') { lidB.disabled = level < MIN; hud.textContent = level < 0.01 ? '물병을 꾹 눌러 물을 받아요' : level < MIN ? `물이 조금 더 필요해요 (MIN까지)` : level <= MAX ? '좋아요! 뚜껑을 닫아요' : over ? '앗, 넘쳤어요!' : 'MAX를 넘었어요 · 이만하면 돼요'; }
+        // 뚜껑
+        if (phase === 'lid') { lidT = Math.min(1, lidT + dt * 1.6); const e = lidT * lidT * (3 - 2 * lidT); lid.position.lerpVectors(lidOff, lidOn, e); lid.position.y += Math.sin(e * Math.PI) * 0.6; if (lidT >= 1) { phase = 'ready'; Sound.sfx.clink(); swB.disabled = false; hud.textContent = '스위치를 눌러 켜요 (손잡이 아래 단추)'; } }
+        // 가열
+        if (phase === 'heat' && on) { const rate = 6.2 / (0.45 + level * 1.1) * (temp > 92 ? 0.7 : 1); temp = Math.min(100, temp + rate * dt);
+          if (temp >= 100) { offAt = 100; auto = true; on = false; led.material.color.set('#2a3036'); sw.position.y = Y0 + 0.1; Sound.sfx.click(); finishBoil(); }
+          else hud.textContent = temp < 50 ? '웅— 데워지고 있어요' : temp < 70 ? '바닥이 뿌옇게 일렁여요' : temp < 82 ? '송골송골 잔기포가 올라와요' : temp < 93 ? '기포가 줄지어 올라와요 · 김이 나요' : '보글보글 펄펄 끓어요!'; }
+        else if (phase === 'done' && temp > 60) temp -= dt * 0.6;
+        showT(temp, phase === 'heat' || phase === 'done');
+        Sound.sfx.set('boil', phase === 'heat' ? Math.max(0.12, (temp - 35) / 65) : 0);
+        // 물 모양
+        const wh = Math.max(0.001, level) * H; water.visible = wTop.visible = level > 0.005; const wr = rAt(level) - 0.02; water.scale.set(wr, wh, wr); water.position.y = Y0 + 0.04 + wh / 2 - 0.02;
+        wob = temp > 90 && phase !== 'fill' ? (temp - 90) / 10 : 0; wTop.position.y = Y0 + 0.04 + wh - 0.02 + Math.sin(el2 * 23) * 0.006 * wob; wTop.scale.set(wr, wr, 1); wTop.rotation.z = Math.sin(el2 * 17) * 0.05 * wob;
+        // 기포: 60℃~ 바닥에 맺힘, 78℃~ 줄지어, 92℃~ 큰 기포
+        if (level > 0.05 && phase !== 'fill') { const tt = temp; const rateB = tt < 58 ? 0 : tt < 78 ? (tt - 58) * 0.9 : tt < 92 ? 18 + (tt - 78) * 2 : 50; bubAcc += rateB * dt; while (bubAcc > 1) { bubAcc--; spawnBub(tt > 92 && Math.random() < 0.55); } }
+        const surfY = Y0 + 0.04 + wh - 0.03;
+        for (const o of bubs) { if (!o.live) continue; if (o.stick > 0) { o.stick -= dt; if (temp < 62) o.stick += dt * 0.5; } else { o.y += o.v * dt; o.v += dt * 0.6; o.x += (Math.random() - 0.5) * 0.004; } if (o.y > surfY) { o.live = false; o.m.visible = false; continue; } o.m.position.set(o.x, o.y, o.z); }
+        // 김
+        const sRate = phase === 'done' ? Math.max(0, (temp - 70) / 30) * 4 : temp < 72 ? 0 : (temp - 72) * 0.45; stAcc += sRate * dt;
+        while (stAcc > 1) { stAcc--; const q = steams.find(z => z.life <= 0); if (!q) break; const p0 = Math.random() < 0.6 ? spoutTip() : new THREE.Vector3((Math.random() - 0.5) * 0.4, Y0 + H + 0.06, (Math.random() - 0.5) * 0.3); q.s.position.copy(p0); q.life = q.max = 1.2 + Math.random() * 0.8; q.s.visible = true; }
+        for (const q of steams) { if (q.life <= 0) continue; q.life -= dt; const u = 1 - q.life / q.max; q.s.position.y += dt * 0.45; q.s.position.x += dt * 0.08; const sz = 0.12 + u * 0.4; q.s.scale.set(sz, sz, 1); q.s.material.opacity = Math.sin(u * Math.PI) * 0.45; if (q.life <= 0) q.s.visible = false; }
+        R3.render(S3, cam);
       });
     })();
     // 우리기
@@ -2431,7 +2521,7 @@ const Tea = (() => {
     function result() {
       const bad = score.filter(s => s === 0).length, good = score.filter(s => s === 2).length, q = bad ? 0 : good === 3 ? 2 : 1;
       const nm = `${QNAME[sel.tt][q]} ${T.name}`, b = frame('🍵 차가 다 됐어요'); const r = el('div', 'res'); r.append(el('div', 'e', q === 2 ? '✨🍵' : q === 1 ? '🍵' : '😅🍵'), el('b', '', nm),
-        el('div', 'sub', `${sel.cup === 'house' ? '공방 흰 찻잔' : '내 ' + sel.cup.name}에 ${sel.gentle ? '곱게 ' : ''}따랐어요${sel.plate && sel.arr && sel.arr.length ? ` · 다과 ${sel.arr.length}가지 · ${sel.judge}` : ''}`)); b.append(r);
+        el('div', 'sub', `${sel.cup === 'house' ? '공방 흰 찻잔' : '내 ' + sel.cup.name}에 ${sel.gentle ? '곱게 ' : ''}따랐어요${sel.plate && sel.arr && sel.arr.length ? ` · 다과 ${sel.arr.length}개 · ${sel.judge}` : ''}`)); b.append(r);
       if (q === 2) Sound.sfx.good();
       const row = el('div', 'row'), again = el('button', 'sub2', '다시 내리기'), ok = el('button', '', '찻상에 올리기'); row.append(again, ok); b.append(row);
       again.onclick = () => play(sel);
